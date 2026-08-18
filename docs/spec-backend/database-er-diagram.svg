@@ -1,0 +1,330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg
+          viewBox="0 0 1280 720"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-labelledby="pockira-er-title pockira-er-desc"
+         width="1280" height="720">
+          <title id="pockira-er-title">Modelo de datos del MVP de Pockira</title>
+          <desc id="pockira-er-desc">
+            Diagrama entidad-relación de auth.users, notes, note_accesses, reminders y user_preferences, con notes como agregado central.
+          </desc>
+          <defs>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&amp;family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap');
+              
+                    *,
+                    *::before,
+                    *::after {
+                      box-sizing: border-box;
+                    }
+              
+                    :root {
+                      --paper: #f5f5f5;
+                      --ink: #2d3142;
+                      --muted: #4f5d75;
+                      --soft: #7a8399;
+                      --accent: #eb6c36;
+                      --font-sans: "Geist", system-ui, sans-serif;
+                      --font-serif: "Instrument Serif", Georgia, serif;
+                      --font-mono: "Geist Mono", ui-monospace, monospace;
+                    }
+              
+                    body {
+                      min-height: 100vh;
+                      margin: 0;
+                      padding: 40px;
+                      background: var(--paper);
+                      color: var(--ink);
+                      font-family: var(--font-sans);
+                    }
+              
+                    main {
+                      width: min(100%, 1280px);
+                      margin: 0 auto;
+                    }
+              
+                    .eyebrow {
+                      margin: 0 0 8px;
+                      color: var(--muted);
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                      font-weight: 500;
+                      letter-spacing: 0.18em;
+                      text-transform: uppercase;
+                    }
+              
+                    h1 {
+                      margin: 0 0 8px;
+                      font-family: var(--font-serif);
+                      font-size: 28px;
+                      font-weight: 400;
+                      letter-spacing: -0.02em;
+                      line-height: 1.15;
+                    }
+              
+                    .subtitle {
+                      max-width: 760px;
+                      margin: 0 0 24px;
+                      color: var(--muted);
+                      font-size: 12px;
+                      line-height: 1.5;
+                    }
+              
+                    .diagram {
+                      overflow-x: auto;
+                    }
+              
+                    svg {
+                      display: block;
+                      width: 100%;
+                      min-width: 960px;
+                      height: auto;
+                    }
+              
+                    .relationship {
+                      fill: none;
+                      stroke: var(--muted);
+                      stroke-width: 1;
+                    }
+              
+                    .relationship-label {
+                      fill: var(--muted);
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                      letter-spacing: 0.08em;
+                      text-anchor: middle;
+                    }
+              
+                    .cardinality {
+                      fill: var(--muted);
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                      font-weight: 600;
+                      text-anchor: middle;
+                    }
+              
+                    .entity-name {
+                      fill: var(--ink);
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 600;
+                    }
+              
+                    .entity-tag {
+                      fill: var(--muted);
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                      font-weight: 500;
+                      letter-spacing: 0.12em;
+                    }
+              
+                    .entity-tag-accent {
+                      fill: var(--accent);
+                    }
+              
+                    .field,
+                    .field-type {
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                    }
+              
+                    .field {
+                      fill: var(--ink);
+                    }
+              
+                    .field-type {
+                      fill: var(--muted);
+                      text-anchor: end;
+                    }
+              
+                    .legend-label {
+                      fill: var(--muted);
+                      font-family: var(--font-sans);
+                      font-size: 8px;
+                    }
+              
+                    .legend-heading {
+                      fill: var(--muted);
+                      font-family: var(--font-mono);
+                      font-size: 8px;
+                      letter-spacing: 0.16em;
+                    }
+                  
+            </style>
+            <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#4f5d75" />
+            </marker>
+            <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#eb6c36" />
+            </marker>
+            <marker id="arrow-link" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+              <polygon points="0 0, 8 3, 0 6" fill="#2e5aa8" />
+            </marker>
+          </defs>
+
+          <rect width="1280" height="720" fill="#f5f5f5" />
+
+          <!-- Relaciones: se dibujan antes que las entidades. -->
+          <path class="relationship" d="M 280 272 H 312 Q 320 272 320 264 V 112 Q 320 104 328 104 H 480" />
+          <path class="relationship" d="M 280 304 H 352 Q 360 304 360 312 Q 360 320 368 320 H 480" />
+          <path class="relationship" d="M 280 336 H 392 Q 400 336 400 344 V 520 Q 400 528 408 528 H 480" />
+          <path class="relationship" d="M 160 368 V 612 Q 160 620 168 620 H 1072 Q 1080 620 1080 612 V 408" />
+          <path class="relationship" d="M 920 260 H 888 Q 880 260 880 252 V 152 Q 880 144 872 144 H 800" />
+          <path class="relationship" d="M 920 304 H 868 Q 860 304 860 312 V 352 Q 860 360 852 360 H 800" />
+          <path class="relationship" d="M 920 348 H 828 Q 820 348 820 356 V 520 Q 820 528 812 528 H 800" />
+
+          <!-- Etiquetas de relación, separadas 8 px de sus conectores. -->
+          <rect x="352" y="84" width="96" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="400" y="92">IDENTIFICA</text>
+          <rect x="388" y="300" width="64" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="420" y="308">PROGRAMA</text>
+          <rect x="328" y="408" width="64" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="360" y="416">CONFIGURA</text>
+          <rect x="596" y="600" width="56" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="624" y="608">POSEE</text>
+          <rect x="816" y="124" width="56" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="844" y="132">COMPARTE</text>
+          <rect x="868" y="328" width="64" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="900" y="336">RECUERDA</text>
+          <rect x="828" y="428" width="56" height="12" rx="2" fill="#f5f5f5" />
+          <text class="relationship-label" x="856" y="436">ÚLTIMA</text>
+
+          <!-- Cardinalidades. -->
+          <text class="cardinality" x="292" y="264">1</text>
+          <text class="cardinality" x="468" y="96">N</text>
+          <text class="cardinality" x="292" y="296">1</text>
+          <text class="cardinality" x="468" y="312">N</text>
+          <text class="cardinality" x="292" y="328">1</text>
+          <text class="cardinality" x="468" y="520">0..1</text>
+          <text class="cardinality" x="148" y="384">1</text>
+          <text class="cardinality" x="1068" y="424">N</text>
+          <text class="cardinality" x="908" y="252">1</text>
+          <text class="cardinality" x="812" y="136">N</text>
+          <text class="cardinality" x="908" y="296">1</text>
+          <text class="cardinality" x="812" y="352">N</text>
+          <text class="cardinality" x="908" y="340">1</text>
+          <text class="cardinality" x="812" y="520">N</text>
+
+          <!-- Entidad externa: auth.users. -->
+          <g>
+            <rect x="40" y="240" width="240" height="128" rx="6" fill="#f5f5f5" />
+            <rect x="40" y="240" width="240" height="128" rx="6" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4 4" />
+            <rect x="40" y="240" width="240" height="40" rx="6" fill="rgba(79,93,117,0.08)" />
+            <rect x="40" y="272" width="240" height="8" fill="rgba(79,93,117,0.08)" />
+            <line x1="40" y1="280" x2="280" y2="280" stroke="rgba(45,49,66,0.20)" stroke-width="1" />
+            <text class="entity-tag" x="56" y="256">EXTERNAL · INSFORGE</text>
+            <text class="entity-name" x="56" y="272">auth.users</text>
+            <text class="field" x="56" y="304"># id</text>
+            <text class="field-type" x="264" y="304">uuid</text>
+            <text class="field" x="56" y="324">email</text>
+            <text class="field-type" x="264" y="324">text</text>
+            <text class="field" x="56" y="344">profile</text>
+            <text class="field-type" x="264" y="344">jsonb</text>
+          </g>
+
+          <!-- Entidad: note_accesses. -->
+          <g>
+            <rect x="480" y="40" width="320" height="208" rx="6" fill="#f5f5f5" />
+            <rect x="480" y="40" width="320" height="208" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1" />
+            <rect x="480" y="40" width="320" height="40" rx="6" fill="rgba(45,49,66,0.04)" />
+            <rect x="480" y="72" width="320" height="8" fill="rgba(45,49,66,0.04)" />
+            <line x1="480" y1="80" x2="800" y2="80" stroke="rgba(45,49,66,0.22)" stroke-width="1" />
+            <text class="entity-tag" x="496" y="56">ENTITY · ACCESS CONTROL</text>
+            <text class="entity-name" x="496" y="72">note_accesses</text>
+            <text class="field" x="496" y="104"># id</text>
+            <text class="field-type" x="784" y="104">uuid</text>
+            <text class="field" x="496" y="124">→ note_id</text>
+            <text class="field-type" x="784" y="124">uuid</text>
+            <text class="field" x="496" y="144">→ user_id</text>
+            <text class="field-type" x="784" y="144">uuid?</text>
+            <text class="field" x="496" y="164">invited_email</text>
+            <text class="field-type" x="784" y="164">text</text>
+            <text class="field" x="496" y="184">role</text>
+            <text class="field-type" x="784" y="184">enum</text>
+            <text class="field" x="496" y="204">status</text>
+            <text class="field-type" x="784" y="204">enum</text>
+            <text class="field" x="496" y="224">→ invited_by</text>
+            <text class="field-type" x="784" y="224">uuid</text>
+          </g>
+
+          <!-- Entidad: reminders. -->
+          <g>
+            <rect x="480" y="272" width="320" height="168" rx="6" fill="#f5f5f5" />
+            <rect x="480" y="272" width="320" height="168" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1" />
+            <rect x="480" y="272" width="320" height="40" rx="6" fill="rgba(45,49,66,0.04)" />
+            <rect x="480" y="304" width="320" height="8" fill="rgba(45,49,66,0.04)" />
+            <line x1="480" y1="312" x2="800" y2="312" stroke="rgba(45,49,66,0.22)" stroke-width="1" />
+            <text class="entity-tag" x="496" y="288">ENTITY · USER PRIVATE</text>
+            <text class="entity-name" x="496" y="304">reminders</text>
+            <text class="field" x="496" y="336"># id</text>
+            <text class="field-type" x="784" y="336">uuid</text>
+            <text class="field" x="496" y="356">→ note_id</text>
+            <text class="field-type" x="784" y="356">uuid</text>
+            <text class="field" x="496" y="376">→ user_id</text>
+            <text class="field-type" x="784" y="376">uuid</text>
+            <text class="field" x="496" y="396">remind_at</text>
+            <text class="field-type" x="784" y="396">timestamptz</text>
+            <text class="field" x="496" y="416">status</text>
+            <text class="field-type" x="784" y="416">enum</text>
+          </g>
+
+          <!-- Entidad: user_preferences. -->
+          <g>
+            <rect x="480" y="464" width="320" height="128" rx="6" fill="#f5f5f5" />
+            <rect x="480" y="464" width="320" height="128" rx="6" fill="#ffffff" stroke="#2d3142" stroke-width="1" />
+            <rect x="480" y="464" width="320" height="40" rx="6" fill="rgba(45,49,66,0.04)" />
+            <rect x="480" y="496" width="320" height="8" fill="rgba(45,49,66,0.04)" />
+            <line x1="480" y1="504" x2="800" y2="504" stroke="rgba(45,49,66,0.22)" stroke-width="1" />
+            <text class="entity-tag" x="496" y="480">ENTITY · ONE PER USER</text>
+            <text class="entity-name" x="496" y="496">user_preferences</text>
+            <text class="field" x="496" y="528"># → user_id</text>
+            <text class="field-type" x="784" y="528">uuid</text>
+            <text class="field" x="496" y="548">→ last_opened_note_id</text>
+            <text class="field-type" x="784" y="548">uuid?</text>
+            <text class="field" x="496" y="568">timezone</text>
+            <text class="field-type" x="784" y="568">text?</text>
+          </g>
+
+          <!-- Entidad focal: notes. -->
+          <g>
+            <rect x="920" y="200" width="320" height="208" rx="6" fill="#f5f5f5" />
+            <rect x="920" y="200" width="320" height="208" rx="6" fill="rgba(235,108,54,0.04)" stroke="#eb6c36" stroke-width="1" />
+            <rect x="920" y="200" width="320" height="40" rx="6" fill="rgba(235,108,54,0.10)" />
+            <rect x="920" y="232" width="320" height="8" fill="rgba(235,108,54,0.10)" />
+            <line x1="920" y1="240" x2="1240" y2="240" stroke="rgba(235,108,54,0.40)" stroke-width="1" />
+            <text class="entity-tag entity-tag-accent" x="936" y="216">ENTITY · AGGREGATE ROOT</text>
+            <text class="entity-name" x="936" y="232">notes</text>
+            <text class="field" x="936" y="264"># id</text>
+            <text class="field-type" x="1224" y="264">uuid</text>
+            <text class="field" x="936" y="284">→ owner_id</text>
+            <text class="field-type" x="1224" y="284">uuid</text>
+            <text class="field" x="936" y="304">title</text>
+            <text class="field-type" x="1224" y="304">text</text>
+            <text class="field" x="936" y="324">content</text>
+            <text class="field-type" x="1224" y="324">jsonb</text>
+            <text class="field" x="936" y="344">created_at</text>
+            <text class="field-type" x="1224" y="344">timestamptz</text>
+            <text class="field" x="936" y="364">updated_at</text>
+            <text class="field-type" x="1224" y="364">timestamptz</text>
+            <text class="field" x="936" y="384">deleted_at</text>
+            <text class="field-type" x="1224" y="384">timestamptz?</text>
+          </g>
+
+          <!-- Leyenda fuera del área del modelo. -->
+          <line x1="40" y1="660" x2="1240" y2="660" stroke="rgba(45,49,66,0.12)" stroke-width="0.8" />
+          <text class="legend-heading" x="40" y="680">LEYENDA</text>
+          <rect x="132" y="672" width="16" height="12" rx="2" fill="rgba(235,108,54,0.04)" stroke="#eb6c36" stroke-width="1" />
+          <text class="legend-label" x="156" y="680">Agregado principal</text>
+          <rect x="296" y="672" width="16" height="12" rx="2" fill="#ffffff" stroke="#2d3142" stroke-width="1" />
+          <text class="legend-label" x="320" y="680">Tabla de Pockira</text>
+          <rect x="448" y="672" width="16" height="12" rx="2" fill="rgba(45,49,66,0.03)" stroke="rgba(45,49,66,0.30)" stroke-width="1" stroke-dasharray="4 4" />
+          <text class="legend-label" x="472" y="680">Gestionada por InsForge</text>
+          <text class="field" x="664" y="680">#</text>
+          <text class="legend-label" x="680" y="680">Clave primaria</text>
+          <text class="field" x="784" y="680">→</text>
+          <text class="legend-label" x="804" y="680">Clave foránea</text>
+          <text class="cardinality" x="920" y="680">1 / N / 0..1</text>
+          <text class="legend-label" x="968" y="680">Cardinalidad</text>
+        </svg>
+
