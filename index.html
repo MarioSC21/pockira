@@ -1,14 +1,25 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/pockira.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="A type-safe TanStack Router workspace with loaders and shareable URL state."
-    />
-    <title>Pockira Router Workspace</title>
+    <meta name="description" content="Pockira: tus notas, a mano." />
+    <title>Pockira</title>
+    <script>
+      // Applied before React mounts so a stored/preferred dark theme paints
+      // immediately instead of flashing the light theme for one frame.
+      try {
+        var storedTheme = localStorage.getItem("pockira:theme")
+        var prefersDark =
+          storedTheme === "dark" ||
+          (!storedTheme &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        if (prefersDark) {
+          document.documentElement.classList.add("dark")
+        }
+      } catch (e) {}
+    </script>
   </head>
 
   <body>

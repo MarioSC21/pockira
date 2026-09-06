@@ -1,3 +1,2 @@
-export { AuthLayout } from "./layouts/auth-layout"
+export { AuthProvider, useAuth } from "./context/auth-context"
 export { LoginScreen } from "./screens/login-screen"
-export { RegisterScreen } from "./screens/register-screen"

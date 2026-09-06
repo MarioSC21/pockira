@@ -493,33 +493,39 @@ Los cuatro archivos no son obligatorios. Un módulo que solo accede a almacenami
 
 `api.ts` contiene las operaciones remotas del módulo. Sus funciones no importan hooks, no administran caché y no muestran interfaz. Deben poder utilizarse desde Query, loaders, actions y pruebas.
 
+Agrupa las operaciones en un único objeto con el nombre del recurso, en lugar de funciones sueltas con el nombre del recurso repetido en cada una (`fetchWorkflows`, `createWorkflow`). El nombre del objeto ya aporta ese contexto, y el call site queda más legible: `workflow.all()`, `workflow.create(input)`, `auth.login(email, password)`.
+
 ```ts
 import type { Workflow, WorkflowInput } from "../types/workflow"
 
-export async function fetchWorkflows(): Promise<Workflow[]> {
-  const response = await fetch("/api/workflows")
+export const workflow = {
+  async all(): Promise<Workflow[]> {
+    const response = await fetch("/api/workflows")
 
-  if (!response.ok) {
-    throw new Error("No se pudieron cargar los workflows")
-  }
+    if (!response.ok) {
+      throw new Error("No se pudieron cargar los workflows")
+    }
 
-  return response.json() as Promise<Workflow[]>
-}
+    return response.json() as Promise<Workflow[]>
+  },
 
-export async function createWorkflow(input: WorkflowInput): Promise<Workflow> {
-  const response = await fetch("/api/workflows", {
-    body: JSON.stringify(input),
-    headers: { "Content-Type": "application/json" },
-    method: "POST",
-  })
+  async create(input: WorkflowInput): Promise<Workflow> {
+    const response = await fetch("/api/workflows", {
+      body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST",
+    })
 
-  if (!response.ok) {
-    throw new Error("No se pudo crear el workflow")
-  }
+    if (!response.ok) {
+      throw new Error("No se pudo crear el workflow")
+    }
 
-  return response.json() as Promise<Workflow>
+    return response.json() as Promise<Workflow>
+  },
 }
 ```
+
+Esta convención aplica a cualquier recurso remoto del módulo, no solo a los que usan TanStack Query — por ejemplo `auth.login()` / `auth.logout()` en el módulo de autenticación, o `note.get(id)` / `note.all()` en un futuro módulo de notas.
 
 Si varios módulos utilizan la misma configuración HTTP, autenticación o serialización, extrae ese cliente técnico a `shared/service`. Los endpoints y tipos propios del dominio permanecen en el módulo.
 
@@ -550,18 +556,18 @@ La unidad principal es una factory creada con `queryOptions`. La misma factory d
 ```ts
 import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query"
 
-import { fetchWorkflowDetail, fetchWorkflows } from "./api"
+import { workflow } from "./api"
 import { workflowKeys } from "./keys"
 
 export const workflowsQueryOptions = () =>
   queryOptions({
-    queryFn: fetchWorkflows,
+    queryFn: workflow.all,
     queryKey: workflowKeys.lists(),
   })
 
 export const workflowDetailQueryOptions = (id: string, version?: string) =>
   queryOptions({
-    queryFn: () => fetchWorkflowDetail(id, version),
+    queryFn: () => workflow.detail(id, version),
     queryKey: workflowKeys.detail(id, version),
   })
 
@@ -623,14 +629,14 @@ Las mutations llaman funciones de `api.ts` e invalidan mediante las keys central
 ```ts
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 
-import { createWorkflow, deleteWorkflow } from "./api"
+import { workflow } from "./api"
 import { workflowKeys } from "./keys"
 
 export function useCreateWorkflow() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: createWorkflow,
+    mutationFn: workflow.create,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: workflowKeys.lists(),
@@ -643,7 +649,7 @@ export function useDeleteWorkflow() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: deleteWorkflow,
+    mutationFn: workflow.delete,
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: workflowKeys.all,

@@ -13,11 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as authAuthRouteRouteImport } from './routes/(auth)/_auth/route'
 import { Route as workspaceProtectedRouteRouteImport } from './routes/(workspace)/_protected/route'
 import { Route as authAuthLoginRouteImport } from './routes/(auth)/_auth/login'
-import { Route as authAuthRegisterRouteImport } from './routes/(auth)/_auth/register'
-import { Route as workspaceProtectedSettingsRouteImport } from './routes/(workspace)/_protected/settings'
-import { Route as workspaceProtectedNotesIndexRouteImport } from './routes/(workspace)/_protected/notes/index'
-import { Route as workspaceProtectedNotesNoteIdRouteImport } from './routes/(workspace)/_protected/notes/$noteId'
-import { Route as workspaceProtectedNotesSharedRouteImport } from './routes/(workspace)/_protected/notes/shared'
+import { Route as workspaceProtectedNotesRouteImport } from './routes/(workspace)/_protected/notes'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -37,53 +33,21 @@ const authAuthLoginRoute = authAuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => authAuthRouteRoute,
 } as any)
-const authAuthRegisterRoute = authAuthRegisterRouteImport.update({
-  id: '/register',
-  path: '/register',
-  getParentRoute: () => authAuthRouteRoute,
+const workspaceProtectedNotesRoute = workspaceProtectedNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => workspaceProtectedRouteRoute,
 } as any)
-const workspaceProtectedSettingsRoute =
-  workspaceProtectedSettingsRouteImport.update({
-    id: '/settings',
-    path: '/settings',
-    getParentRoute: () => workspaceProtectedRouteRoute,
-  } as any)
-const workspaceProtectedNotesIndexRoute =
-  workspaceProtectedNotesIndexRouteImport.update({
-    id: '/notes/',
-    path: '/notes/',
-    getParentRoute: () => workspaceProtectedRouteRoute,
-  } as any)
-const workspaceProtectedNotesNoteIdRoute =
-  workspaceProtectedNotesNoteIdRouteImport.update({
-    id: '/notes/$noteId',
-    path: '/notes/$noteId',
-    getParentRoute: () => workspaceProtectedRouteRoute,
-  } as any)
-const workspaceProtectedNotesSharedRoute =
-  workspaceProtectedNotesSharedRouteImport.update({
-    id: '/notes/shared',
-    path: '/notes/shared',
-    getParentRoute: () => workspaceProtectedRouteRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof authAuthLoginRoute
-  '/register': typeof authAuthRegisterRoute
-  '/settings': typeof workspaceProtectedSettingsRoute
-  '/notes/$noteId': typeof workspaceProtectedNotesNoteIdRoute
-  '/notes/shared': typeof workspaceProtectedNotesSharedRoute
-  '/notes/': typeof workspaceProtectedNotesIndexRoute
+  '/notes': typeof workspaceProtectedNotesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof authAuthLoginRoute
-  '/register': typeof authAuthRegisterRoute
-  '/settings': typeof workspaceProtectedSettingsRoute
-  '/notes/$noteId': typeof workspaceProtectedNotesNoteIdRoute
-  '/notes/shared': typeof workspaceProtectedNotesSharedRoute
-  '/notes': typeof workspaceProtectedNotesIndexRoute
+  '/notes': typeof workspaceProtectedNotesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -91,42 +55,20 @@ export interface FileRoutesById {
   '/(auth)/_auth': typeof authAuthRouteRouteWithChildren
   '/(workspace)/_protected': typeof workspaceProtectedRouteRouteWithChildren
   '/(auth)/_auth/login': typeof authAuthLoginRoute
-  '/(auth)/_auth/register': typeof authAuthRegisterRoute
-  '/(workspace)/_protected/settings': typeof workspaceProtectedSettingsRoute
-  '/(workspace)/_protected/notes/$noteId': typeof workspaceProtectedNotesNoteIdRoute
-  '/(workspace)/_protected/notes/shared': typeof workspaceProtectedNotesSharedRoute
-  '/(workspace)/_protected/notes/': typeof workspaceProtectedNotesIndexRoute
+  '/(workspace)/_protected/notes': typeof workspaceProtectedNotesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/login'
-    | '/register'
-    | '/settings'
-    | '/notes/$noteId'
-    | '/notes/shared'
-    | '/notes/'
+  fullPaths: '/' | '/login' | '/notes'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/login'
-    | '/register'
-    | '/settings'
-    | '/notes/$noteId'
-    | '/notes/shared'
-    | '/notes'
+  to: '/' | '/login' | '/notes'
   id:
     | '__root__'
     | '/'
     | '/(auth)/_auth'
     | '/(workspace)/_protected'
     | '/(auth)/_auth/login'
-    | '/(auth)/_auth/register'
-    | '/(workspace)/_protected/settings'
-    | '/(workspace)/_protected/notes/$noteId'
-    | '/(workspace)/_protected/notes/shared'
-    | '/(workspace)/_protected/notes/'
+    | '/(workspace)/_protected/notes'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -165,39 +107,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof authAuthLoginRouteImport
       parentRoute: typeof authAuthRouteRoute
     }
-    '/(auth)/_auth/register': {
-      id: '/(auth)/_auth/register'
-      path: '/register'
-      fullPath: '/register'
-      preLoaderRoute: typeof authAuthRegisterRouteImport
-      parentRoute: typeof authAuthRouteRoute
-    }
-    '/(workspace)/_protected/settings': {
-      id: '/(workspace)/_protected/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof workspaceProtectedSettingsRouteImport
-      parentRoute: typeof workspaceProtectedRouteRoute
-    }
-    '/(workspace)/_protected/notes/': {
-      id: '/(workspace)/_protected/notes/'
+    '/(workspace)/_protected/notes': {
+      id: '/(workspace)/_protected/notes'
       path: '/notes'
-      fullPath: '/notes/'
-      preLoaderRoute: typeof workspaceProtectedNotesIndexRouteImport
-      parentRoute: typeof workspaceProtectedRouteRoute
-    }
-    '/(workspace)/_protected/notes/$noteId': {
-      id: '/(workspace)/_protected/notes/$noteId'
-      path: '/notes/$noteId'
-      fullPath: '/notes/$noteId'
-      preLoaderRoute: typeof workspaceProtectedNotesNoteIdRouteImport
-      parentRoute: typeof workspaceProtectedRouteRoute
-    }
-    '/(workspace)/_protected/notes/shared': {
-      id: '/(workspace)/_protected/notes/shared'
-      path: '/notes/shared'
-      fullPath: '/notes/shared'
-      preLoaderRoute: typeof workspaceProtectedNotesSharedRouteImport
+      fullPath: '/notes'
+      preLoaderRoute: typeof workspaceProtectedNotesRouteImport
       parentRoute: typeof workspaceProtectedRouteRoute
     }
   }
@@ -205,12 +119,10 @@ declare module '@tanstack/react-router' {
 
 interface authAuthRouteRouteChildren {
   authAuthLoginRoute: typeof authAuthLoginRoute
-  authAuthRegisterRoute: typeof authAuthRegisterRoute
 }
 
 const authAuthRouteRouteChildren: authAuthRouteRouteChildren = {
   authAuthLoginRoute: authAuthLoginRoute,
-  authAuthRegisterRoute: authAuthRegisterRoute,
 }
 
 const authAuthRouteRouteWithChildren = authAuthRouteRoute._addFileChildren(
@@ -218,18 +130,12 @@ const authAuthRouteRouteWithChildren = authAuthRouteRoute._addFileChildren(
 )
 
 interface workspaceProtectedRouteRouteChildren {
-  workspaceProtectedSettingsRoute: typeof workspaceProtectedSettingsRoute
-  workspaceProtectedNotesNoteIdRoute: typeof workspaceProtectedNotesNoteIdRoute
-  workspaceProtectedNotesSharedRoute: typeof workspaceProtectedNotesSharedRoute
-  workspaceProtectedNotesIndexRoute: typeof workspaceProtectedNotesIndexRoute
+  workspaceProtectedNotesRoute: typeof workspaceProtectedNotesRoute
 }
 
 const workspaceProtectedRouteRouteChildren: workspaceProtectedRouteRouteChildren =
   {
-    workspaceProtectedSettingsRoute: workspaceProtectedSettingsRoute,
-    workspaceProtectedNotesNoteIdRoute: workspaceProtectedNotesNoteIdRoute,
-    workspaceProtectedNotesSharedRoute: workspaceProtectedNotesSharedRoute,
-    workspaceProtectedNotesIndexRoute: workspaceProtectedNotesIndexRoute,
+    workspaceProtectedNotesRoute: workspaceProtectedNotesRoute,
   }
 
 const workspaceProtectedRouteRouteWithChildren =

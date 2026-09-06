@@ -1,151 +1,183 @@
 import { insforge } from "@/shared/service/insforge-client"
 
-import {
-  databaseNoteSchema,
-  databaseNotesSchema,
-} from "../schemas/database-note-schema"
-import type { DatabaseNote } from "../schemas/database-note-schema"
-import type { Note, NotesQuery, NotesResult } from "../types/note"
+import type {
+  Note,
+  NoteAccess,
+  NoteAccessRole,
+  NoteScope,
+  Reminder,
+  ReminderRepeatInterval,
+  TiptapDoc,
+} from "../types/note"
 
-const NOTES_PER_PAGE = 4
-const EMPTY_NOTES_RESULT: NotesResult = {
-  notes: [],
-  pageCount: 1,
-  total: 0,
+export interface NoteCursor {
+  updatedAt: string
+  id: string
 }
 
-const getContentText = (value: unknown): string => {
-  if (typeof value === "string") {
-    return value
-  }
-
-  if (Array.isArray(value)) {
-    return value.map(getContentText).filter(Boolean).join(" ")
-  }
-
-  if (typeof value !== "object" || value === null) {
-    return ""
-  }
-
-  const record = value as Record<string, unknown>
-  const nodeText = typeof record.text === "string" ? record.text : ""
-  const childText = getContentText(record.content)
-
-  return [nodeText, childText].filter(Boolean).join(" ")
+export interface ListNotesParams {
+  scope: NoteScope
+  search?: string
+  date?: { year: number; month?: number; day?: number }
+  timezone: string
+  cursor?: NoteCursor | null
+  limit?: number
 }
 
-const createExcerpt = (content: string): string => {
-  const normalizedContent = content.split(/\s+/u).join(" ").trim()
-
-  if (!normalizedContent) {
-    return "This note does not have any text yet."
-  }
-
-  const excerpt = normalizedContent.slice(0, 140)
-
-  return normalizedContent.length > excerpt.length ? `${excerpt}…` : excerpt
+export interface ListNotesResult {
+  items: Note[]
+  nextCursor: NoteCursor | null
 }
 
-const mapDatabaseNote = (note: DatabaseNote, userId: string): Note => {
-  const content = getContentText(note.content)
+export const note = {
+  async list({
+    scope,
+    search,
+    date,
+    timezone,
+    cursor,
+    limit = 20,
+  }: ListNotesParams): Promise<ListNotesResult> {
+    const { data, error } = await insforge.database.rpc("list_notes", {
+      p_cursor_id: cursor?.id ?? null,
+      p_cursor_updated_at: cursor?.updatedAt ?? null,
+      p_day: date?.day ?? null,
+      p_limit: limit,
+      p_month: date?.month ?? null,
+      p_scope: scope,
+      p_search: search ?? null,
+      p_timezone: timezone,
+      p_year: date?.year ?? null,
+    })
 
-  return {
-    content,
-    excerpt: createExcerpt(content),
-    id: note.id,
-    title: note.title,
-    updatedAt: note.updated_at,
-    visibility: note.owner_id === userId ? "personal" : "shared",
-  }
-}
+    if (error) {
+      throw new Error(error.message)
+    }
 
-const getCurrentUserId = async (): Promise<string | null> => {
-  const { data, error } = await insforge.auth.getCurrentUser()
+    const items = (data ?? []) as Note[]
+    const last = items.at(-1)
 
-  if (error) {
-    throw new Error(`Unable to restore the InsForge session: ${error.message}`)
-  }
+    return {
+      items,
+      nextCursor:
+        items.length === limit && last
+          ? { id: last.id, updatedAt: last.updated_at }
+          : null,
+    }
+  },
 
-  return data?.user?.id ?? null
-}
+  async get(id: string): Promise<Note> {
+    const { data, error } = await insforge.database
+      .from("notes")
+      .select()
+      .eq("id", id)
+      .single()
 
-export const getNoteById = async (noteId: string): Promise<Note> => {
-  const userId = await getCurrentUserId()
+    if (error || !data) {
+      throw new Error(error?.message ?? "Nota no encontrada")
+    }
 
-  if (!userId) {
-    throw new Error("Sign in before opening a note.")
-  }
+    return data as Note
+  },
 
-  const { data, error } = await insforge.database
-    .from("notes")
-    .select("id, owner_id, title, content, updated_at")
-    .eq("id", noteId)
-    .is("deleted_at", null)
-    .maybeSingle()
+  async create(input: { title: string; content: TiptapDoc }): Promise<Note> {
+    const { data, error } = await insforge.database
+      .from("notes")
+      .insert([input])
+      .select()
+      .single()
 
-  if (error) {
-    throw new Error(`Unable to load the note: ${error.message}`)
-  }
+    if (error || !data) {
+      throw new Error(error?.message ?? "No se pudo crear la nota")
+    }
 
-  if (!data) {
-    throw new Error(`No accessible note exists with the id “${noteId}”.`)
-  }
+    return data as Note
+  },
 
-  return mapDatabaseNote(databaseNoteSchema.parse(data), userId)
-}
+  async update(
+    id: string,
+    input: Partial<{ title: string; content: TiptapDoc }>
+  ): Promise<Note> {
+    const { data, error } = await insforge.database
+      .from("notes")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single()
 
-export const getNotes = async ({
-  page,
-  query,
-  sort,
-  view,
-}: NotesQuery): Promise<NotesResult> => {
-  const userId = await getCurrentUserId()
+    if (error || !data) {
+      throw new Error(error?.message ?? "No se pudo actualizar la nota")
+    }
 
-  if (!userId) {
-    return EMPTY_NOTES_RESULT
-  }
+    return data as Note
+  },
 
-  const pageStart = (page - 1) * NOTES_PER_PAGE
-  let databaseQuery = insforge.database
-    .from("notes")
-    .select("id, owner_id, title, content, updated_at", { count: "exact" })
-    .is("deleted_at", null)
+  async share(
+    noteId: string,
+    input: { email: string; role: NoteAccessRole }
+  ): Promise<{ access: NoteAccess; emailSent: boolean; emailError?: string }> {
+    const { data, error } = await insforge.database
+      .from("note_accesses")
+      .insert([
+        { invited_email: input.email, note_id: noteId, role: input.role },
+      ])
+      .select()
+      .single()
 
-  const normalizedQuery = query.trim()
+    if (error || !data) {
+      throw new Error(error?.message ?? "No se pudo compartir la nota")
+    }
 
-  if (normalizedQuery) {
-    databaseQuery = databaseQuery.ilike("title", `%${normalizedQuery}%`)
-  }
+    const access = data as NoteAccess
 
-  if (view === "personal") {
-    databaseQuery = databaseQuery.eq("owner_id", userId)
-  } else if (view === "shared") {
-    databaseQuery = databaseQuery.neq("owner_id", userId)
-  }
+    const { error: inviteError } = await insforge.functions.invoke(
+      "notes-share-invite",
+      { body: { noteAccessId: access.id } }
+    )
 
-  databaseQuery =
-    sort === "title"
-      ? databaseQuery.order("title", { ascending: true })
-      : databaseQuery.order("updated_at", { ascending: false })
+    return {
+      access,
+      emailError: inviteError?.message,
+      emailSent: !inviteError,
+    }
+  },
 
-  const { count, data, error } = await databaseQuery.range(
-    pageStart,
-    pageStart + NOTES_PER_PAGE - 1
-  )
+  async collaborators(noteId: string): Promise<NoteAccess[]> {
+    const { data, error } = await insforge.database
+      .from("note_accesses")
+      .select(
+        "id, note_id, user_id, invited_email, role, status, created_at, accepted_at, revoked_at"
+      )
+      .eq("note_id", noteId)
+      .order("created_at")
 
-  if (error) {
-    throw new Error(`Unable to load notes: ${error.message}`)
-  }
+    if (error) {
+      throw new Error(error.message)
+    }
 
-  const notes = databaseNotesSchema
-    .parse(data ?? [])
-    .map((note) => mapDatabaseNote(note, userId))
-  const total = count ?? notes.length
+    return (data ?? []) as NoteAccess[]
+  },
 
-  return {
-    notes,
-    pageCount: Math.max(1, Math.ceil(total / NOTES_PER_PAGE)),
-    total,
-  }
+  async createReminder(
+    noteId: string,
+    input: { remindAt: string; repeatInterval: ReminderRepeatInterval }
+  ): Promise<Reminder> {
+    const { data, error } = await insforge.database
+      .from("reminders")
+      .insert([
+        {
+          note_id: noteId,
+          remind_at: input.remindAt,
+          repeat_interval: input.repeatInterval,
+        },
+      ])
+      .select()
+      .single()
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "No se pudo crear el recordatorio")
+    }
+
+    return data as Reminder
+  },
 }

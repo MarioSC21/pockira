@@ -1,26 +1,55 @@
-import { Link } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
+
+import { OAuthButton } from "../components/oauth-button"
+import { useAuth } from "../context/auth-context"
+
+function toErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback
+}
 
 export function LoginScreen() {
+  const { signInWithOAuth } = useAuth()
+  const navigate = useNavigate()
+
+  const [error, setError] = useState<string | null>(null)
+  const [isSigningIn, setIsSigningIn] = useState(false)
+
+  async function handleGoogleSignIn() {
+    setError(null)
+    setIsSigningIn(true)
+
+    try {
+      await signInWithOAuth("google")
+      await navigate({ to: "/notes" })
+    } catch (signInError) {
+      setIsSigningIn(false)
+      setError(toErrorMessage(signInError, "No se pudo iniciar sesión"))
+    }
+  }
+
   return (
-    <div className="text-center">
-      <span className="text-primary text-xs font-semibold tracking-[0.18em] uppercase">
-        Bienvenido
-      </span>
-      <h1 className="font-heading mt-3 text-3xl font-semibold">
-        Vuelve a tus notas
-      </h1>
-      <p className="text-muted-foreground mt-3 text-sm">
-        La conexión con Google se implementará en el siguiente paso.
-      </p>
-      <p className="mt-8 text-sm">
-        ¿Primera vez en Pockira?{" "}
-        <Link
-          className="text-primary font-semibold hover:underline"
-          to="/register"
-        >
-          Crear cuenta
-        </Link>
-      </p>
+    <div className="bg-background flex min-h-svh items-center justify-center px-4">
+      <div className="w-full max-w-sm space-y-6">
+        <div className="space-y-1 text-center">
+          <h1 className="text-foreground text-xl font-semibold">
+            Iniciar sesión
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Entra a tu cuenta de Pockira con Google
+          </p>
+        </div>
+
+        {error ? (
+          <p className="text-destructive text-center text-sm">{error}</p>
+        ) : null}
+
+        <OAuthButton
+          disabled={isSigningIn}
+          onClick={handleGoogleSignIn}
+          provider="google"
+        />
+      </div>
     </div>
   )
 }

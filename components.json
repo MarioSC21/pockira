@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "src/app/styles/app.css",
+    "css": "src/styles/app.css",
     "baseColor": "mist",
     "cssVariables": true,
     "prefix": ""
@@ -21,5 +21,7 @@
   },
   "menuColor": "default-translucent",
   "menuAccent": "subtle",
-  "registries": {}
+  "registries": {
+    "@plate": "https://platejs.org/r/{name}.json"
+  }
 }

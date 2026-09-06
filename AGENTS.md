@@ -5,6 +5,7 @@ For any linting, formatting, Oxlint, Oxfmt, or Ultracite task or problem, read a
 Antes de crear, mover o revisar módulos del frontend o límites de dependencias, lee y sigue [la arquitectura modular por features](docs/architecture/modular-feature-architecture.md).
 
 <!-- INSFORGE:START -->
+
 ## InsForge backend
 
 This project uses [InsForge](https://insforge.dev): an all-in-one, open-source Postgres-based backend (BaaS) that gives this app a database, authentication, file storage, edge functions, realtime, an AI model gateway, and payments through one platform.
@@ -23,4 +24,5 @@ Key patterns:
 - Database inserts take an array: `insert([{ ... }])`.
 - Reference users with `auth.users(id)`; use `auth.uid()` in RLS policies.
 - For storage uploads, persist both the returned `url` and `key`.
+
 <!-- INSFORGE:END -->

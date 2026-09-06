@@ -1,7 +1,33 @@
-export { NoteDetailsScreen } from "./screens/note-details-screen"
 export { NotesScreen } from "./screens/notes-screen"
+export { note } from "./service/api"
+export type {
+  ListNotesParams,
+  ListNotesResult,
+  NoteCursor,
+} from "./service/api"
+export { noteKeys } from "./service/keys"
 export {
-  notesSearchSchema,
-  type NotesSearch,
-} from "./schemas/notes-search-schema"
-export { getNoteById, getNotes } from "./service/api"
+  useCreateNote,
+  useCreateReminder,
+  useShareNote,
+  useUpdateNote,
+} from "./service/mutations"
+export {
+  noteCollaboratorsQueryOptions,
+  noteDetailQueryOptions,
+  notesListQueryOptions,
+  useNote,
+  useNoteCollaborators,
+  useNotesList,
+} from "./service/queries"
+export type {
+  Note,
+  NoteAccess,
+  NoteAccessRole,
+  NoteAccessStatus,
+  NoteScope,
+  Reminder,
+  ReminderRepeatInterval,
+  ReminderStatus,
+  TiptapDoc,
+} from "./types/note"
