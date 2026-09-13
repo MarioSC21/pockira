@@ -10,6 +10,7 @@ import {
   PilcrowIcon,
   Quote,
   Square,
+  Table,
 } from "lucide-react"
 import { KEYS } from "platejs"
 import type { TComboboxInputElement } from "platejs"
@@ -97,6 +98,12 @@ const groups: Group[] = [
         keywords: ["```", "codigo"],
         label: "Código",
         value: KEYS.codeBlock,
+      },
+      {
+        icon: <Table />,
+        keywords: ["table", "tabla", "grid", "cuadro"],
+        label: "Tabla",
+        value: KEYS.table,
       },
     ].map((item) => ({
       ...item,

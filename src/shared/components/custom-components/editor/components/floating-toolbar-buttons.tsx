@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  BaselineIcon,
   BoldIcon,
   HighlighterIcon,
   ItalicIcon,
@@ -10,6 +11,7 @@ import {
 import { KEYS } from "platejs"
 import { useEditorReadOnly } from "platejs/react"
 
+import { FontColorToolbarButton } from "./font-color-toolbar-button"
 import { LinkToolbarButton } from "./link-toolbar-button"
 import { MarkToolbarButton } from "./mark-toolbar-button"
 import { ToolbarGroup } from "./toolbar"
@@ -45,6 +47,10 @@ export function FloatingToolbarButtons() {
       <MarkToolbarButton nodeType={KEYS.highlight} tooltip="Resaltar">
         <HighlighterIcon />
       </MarkToolbarButton>
+
+      <FontColorToolbarButton nodeType={KEYS.color} tooltip="Color del texto">
+        <BaselineIcon />
+      </FontColorToolbarButton>
 
       <LinkToolbarButton />
     </ToolbarGroup>

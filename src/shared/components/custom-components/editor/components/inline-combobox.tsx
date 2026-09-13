@@ -24,6 +24,7 @@ import type { PointRef, TElement } from "platejs"
 import { useComposedRef, useEditorRef } from "platejs/react"
 import * as React from "react"
 
+import { ScrollArea } from "@/shared/components/ui/scroll-area"
 import { cn } from "@/shared/lib/utils"
 
 type FilterFn = (
@@ -276,6 +277,7 @@ const InlineComboboxInput = ({
 InlineComboboxInput.displayName = "InlineComboboxInput"
 
 const InlineComboboxContent: typeof ComboboxPopover = ({
+  children,
   className,
   ...props
 }) => {
@@ -309,12 +311,18 @@ const InlineComboboxContent: typeof ComboboxPopover = ({
     <Portal>
       <ComboboxPopover
         className={cn(
-          "bg-popover z-500 max-h-[288px] w-[300px] overflow-y-auto rounded-md shadow-md",
+          // overflow-y-visible: scrolling belongs to the ScrollArea below.
+          "bg-popover z-500 w-[300px] overflow-y-visible rounded-md shadow-md",
           className
         )}
         onKeyDownCapture={handleKeyDown}
         {...props}
-      />
+      >
+        {/* 320px rather than Plate's 288px: the default block list measures
+            294px, so the old cap overflowed by 6px and showed a scrollbar that
+            scrolled almost nothing. */}
+        <ScrollArea className="max-h-[320px]">{children}</ScrollArea>
+      </ComboboxPopover>
     </Portal>
   )
 }

@@ -130,6 +130,14 @@ export const ToolbarButton = withTooltip(
       )}
       data-pressed={pressed ? true : undefined}
       {...props}
+      // base-ui (unlike Radix) does not preventDefault on mousedown, so
+      // pressing a toolbar button moves native focus out of the
+      // contenteditable and collapses the editor selection before the click
+      // handler runs. Keep the selection alive for mark/color transforms.
+      onMouseDown={(event) => {
+        event.preventDefault()
+        props.onMouseDown?.(event)
+      }}
     >
       {isDropdown ? (
         <>

@@ -25,10 +25,13 @@ export function ProtectedLayout() {
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <Link
-            className="font-heading truncate px-2 text-lg font-semibold group-data-[collapsible=icon]:opacity-0"
+            className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:px-0"
             to="/notes"
           >
-            Pockira
+            <img alt="Pockira" className="size-8 shrink-0" src="/pockira.svg" />
+            <span className="font-heading truncate text-lg font-semibold group-data-[collapsible=icon]:hidden">
+              Pockira
+            </span>
           </Link>
         </SidebarHeader>
         <SidebarContent>
@@ -54,8 +57,14 @@ export function ProtectedLayout() {
           </SidebarGroup>
         </SidebarContent>
       </Sidebar>
-      <SidebarInset>
-        <main className="min-w-0 flex-1">
+      {/* min-w-0: the inset is a flex item next to the sidebar and defaults to
+          min-width:auto, so its content width pushed the page wider than the
+          viewport and produced a horizontal scrollbar.
+          h-svh: the screens inside size themselves against this height, so it
+          has to be definite -- a percentage or inline height:100% resolves to
+          auto otherwise and the page scrolls instead of the panels. */}
+      <SidebarInset className="h-svh min-w-0 overflow-hidden">
+        <main className="min-h-0 min-w-0 flex-1">
           <Outlet />
         </main>
       </SidebarInset>

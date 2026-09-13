@@ -70,8 +70,10 @@ function TodoMarker(props: PlateElementProps) {
     <div contentEditable={false}>
       <Checkbox
         className={cn(
-          "absolute top-1 -left-6",
-          readOnly && "pointer-events-none"
+          // cursor-pointer: the editor container sets cursor-text, which the
+          // checkbox would otherwise inherit and read as non-interactive.
+          "absolute top-1 -left-6 cursor-pointer",
+          readOnly && "pointer-events-none cursor-text"
         )}
         {...checkboxProps}
       />

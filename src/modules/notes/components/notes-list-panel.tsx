@@ -4,11 +4,24 @@ import {
   PinIcon,
   PlusIcon,
   SearchIcon,
+  Trash2Icon,
 } from "lucide-react"
+import { useState } from "react"
 
+import { DeleteNoteDialog } from "@/modules/notes/components/delete-note-dialog"
 import { NotesWeekCalendar } from "@/modules/notes/components/notes-week-calendar"
 import type { DemoNote } from "@/modules/notes/lib/demo-notes"
+import { noteTags } from "@/modules/notes/lib/demo-notes"
 import { extractText } from "@/modules/notes/lib/note-body"
+import {
+  describeEmptyList,
+  filterToTab,
+  tabToFilter,
+} from "@/modules/notes/lib/note-filters"
+import type {
+  NoteFilter,
+  NoteFilterTab,
+} from "@/modules/notes/lib/note-filters"
 import { Badge } from "@/shared/components/ui/badge"
 import { Button } from "@/shared/components/ui/button"
 import {
@@ -16,44 +29,68 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/shared/components/ui/input-group"
+import { ScrollArea } from "@/shared/components/ui/scroll-area"
 import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs"
 import { cn } from "@/shared/lib/utils"
 
 interface NotesListPanelProps {
-  open: boolean
   notes: DemoNote[]
   selectedDate: Date
   selectedNoteId: string | undefined
+  filter: NoteFilter
+  search: string
   onSelectDate: (date: Date) => void
+  onFilterChange: (filter: NoteFilter) => void
+  onSearchChange: (search: string) => void
   onSelectNote: (id: string) => void
   onCreateNote: () => void
+  onTogglePin: (id: string) => void
+  onDeleteNote: (id: string) => void
 }
 
 export function NotesListPanel({
-  open,
   notes,
   selectedDate,
   selectedNoteId,
+  filter,
+  search,
   onSelectDate,
+  onFilterChange,
+  onSearchChange,
   onSelectNote,
   onCreateNote,
+  onTogglePin,
+  onDeleteNote,
 }: NotesListPanelProps) {
+  const [noteIdToDelete, setNoteIdToDelete] = useState<string>()
+
+  const orderedNotes = [
+    ...notes.filter((note) => note.pinned),
+    ...notes.filter((note) => !note.pinned),
+  ]
+
   return (
-    <div
-      className={cn(
-        "flex shrink-0 flex-col overflow-hidden border-r transition-[width] duration-200",
-        open ? "w-full md:w-80" : "w-0 border-r-0"
-      )}
-    >
-      <div className="flex w-full shrink-0 flex-col gap-4 border-b p-4 md:w-80">
+    // The width is owned by the parent (a ResizablePanel on desktop), so this
+    // panel just fills whatever it is given.
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+      <div className="flex w-full shrink-0 flex-col gap-4 border-b p-4">
         <NotesWeekCalendar onSelect={onSelectDate} selected={selectedDate} />
         <InputGroup>
           <InputGroupAddon>
             <SearchIcon />
           </InputGroupAddon>
-          <InputGroupInput placeholder="Buscar notas..." />
+          <InputGroupInput
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Buscar notas..."
+            value={search}
+          />
         </InputGroup>
-        <Tabs defaultValue="todas">
+        <Tabs
+          onValueChange={(value) =>
+            onFilterChange(tabToFilter(value as NoteFilterTab))
+          }
+          value={filterToTab(filter)}
+        >
           <TabsList className="h-auto w-full flex-wrap justify-start">
             <TabsTrigger value="hoy">Hoy</TabsTrigger>
             <TabsTrigger value="todas">Todas</TabsTrigger>
@@ -62,19 +99,26 @@ export function NotesListPanel({
           </TabsList>
         </Tabs>
       </div>
-      <div className="relative min-h-0 w-full flex-1 md:w-80">
-        <div className="h-full overflow-y-auto p-4">
-          <div className="flex flex-col gap-3 pb-16">
-            {notes.map((note) => (
+      <div className="relative min-h-0 w-full flex-1">
+        <ScrollArea className="h-full">
+          <div className="flex flex-col gap-3 p-4 pb-16">
+            {orderedNotes.length === 0 && (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                {describeEmptyList(filter, search)}
+              </p>
+            )}
+            {orderedNotes.map((note) => (
               <NoteListCard
                 isActive={note.id === selectedNoteId}
                 key={note.id}
                 note={note}
+                onRequestDelete={() => setNoteIdToDelete(note.id)}
                 onSelect={() => onSelectNote(note.id)}
+                onTogglePin={() => onTogglePin(note.id)}
               />
             ))}
           </div>
-        </div>
+        </ScrollArea>
         <Button
           className="absolute right-4 bottom-4 size-11 rounded-full shadow-lg"
           onClick={onCreateNote}
@@ -83,6 +127,17 @@ export function NotesListPanel({
           <PlusIcon />
         </Button>
       </div>
+      {noteIdToDelete && (
+        <DeleteNoteDialog
+          onConfirm={() => onDeleteNote(noteIdToDelete)}
+          onOpenChange={(isDialogOpen) => {
+            if (!isDialogOpen) {
+              setNoteIdToDelete(undefined)
+            }
+          }}
+          open
+        />
+      )}
     </div>
   )
 }
@@ -91,36 +146,68 @@ function NoteListCard({
   note,
   isActive,
   onSelect,
+  onTogglePin,
+  onRequestDelete,
 }: {
   note: DemoNote
   isActive: boolean
   onSelect: () => void
+  onTogglePin: () => void
+  onRequestDelete: () => void
 }) {
   return (
-    <button
+    <div
       className={cn(
-        "bg-card relative w-full rounded-2xl border p-3 text-left",
+        "bg-card relative rounded-2xl border",
         isActive && "border-primary"
       )}
-      onClick={onSelect}
-      type="button"
     >
-      {note.pinned && (
-        <PinIcon className="text-muted-foreground absolute top-3 right-3 size-3.5" />
-      )}
-      <p className="pr-6 text-sm font-medium">{note.title || "Nueva nota"}</p>
-      <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
-        {extractText(note.body) || "Sin contenido"}
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-        {note.tags.map((tag) => (
-          <Badge className="gap-1" key={tag.label} variant="secondary">
-            {tag.icon === "lock" && <LockIcon />}
-            {tag.icon === "clock" && <ClockIcon />}
-            {tag.label}
-          </Badge>
-        ))}
+      <button
+        className="w-full rounded-2xl p-3 text-left"
+        onClick={onSelect}
+        type="button"
+      >
+        <p className="pr-14 text-sm font-medium">
+          {note.title || "Nueva nota"}
+        </p>
+        <p className="text-muted-foreground mt-1 line-clamp-1 text-xs">
+          {extractText(note.body) || "Sin contenido"}
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {noteTags(note).map((tag) => (
+            <Badge className="gap-1" key={tag.label} variant="secondary">
+              {tag.icon === "lock" && <LockIcon />}
+              {tag.icon === "clock" && <ClockIcon />}
+              {tag.label}
+            </Badge>
+          ))}
+        </div>
+      </button>
+      {/* h-5 matches the title's line-height so the icons center on it. */}
+      <div className="absolute top-3 right-3 flex h-5 items-center gap-2">
+        <button
+          aria-label="Eliminar nota"
+          className="text-muted-foreground/50 hover:text-destructive rounded-sm"
+          onClick={onRequestDelete}
+          type="button"
+        >
+          {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's
+              14px it reads as bigger and lower than it. */}
+          <Trash2Icon className="size-3" />
+        </button>
+        <button
+          aria-label={note.pinned ? "Dejar de fijar nota" : "Fijar nota"}
+          aria-pressed={note.pinned}
+          className={cn(
+            "hover:text-foreground rounded-sm",
+            note.pinned ? "text-foreground" : "text-muted-foreground/50"
+          )}
+          onClick={onTogglePin}
+          type="button"
+        >
+          <PinIcon className={cn("size-3.5", note.pinned && "fill-current")} />
+        </button>
       </div>
-    </button>
+    </div>
   )
 }

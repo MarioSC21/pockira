@@ -1,6 +1,7 @@
 "use client"
 
 import { insertCodeBlock } from "@platejs/code-block"
+import { insertTable } from "@platejs/table"
 import { KEYS, PathApi } from "platejs"
 import type { Path, TElement } from "platejs"
 import type { PlateEditor } from "platejs/react"
@@ -36,6 +37,7 @@ const insertBlockMap: Record<
   [KEYS.ol]: insertList,
   [KEYS.ul]: insertList,
   [KEYS.codeBlock]: (editor) => insertCodeBlock(editor, { select: true }),
+  [KEYS.table]: (editor) => insertTable(editor, {}, { select: true }),
 }
 
 interface InsertBlockOptions {
