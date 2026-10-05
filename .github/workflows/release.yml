@@ -4,10 +4,14 @@
 # Release a version:
 #   1. Bump "version" in src-tauri/tauri.conf.json (e.g. 0.2.0).
 #   2. git tag v0.2.0 && git push origin v0.2.0
-#   3. When the run finishes, review the draft under Releases and publish it.
+#   3. The release is published as soon as every build finishes; installed
+#      apps pick it up through latest.json on their next update check.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
+#   TAURI_SIGNING_PRIVATE_KEY — signs the self-updates (key from
+#     `pnpm tauri signer generate`; its public half is in tauri.conf.json).
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — that key's password (empty if none).
 name: Release desktop
 
 on:
@@ -78,6 +82,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_INSFORGE_URL: ${{ secrets.VITE_INSFORGE_URL }}
           VITE_INSFORGE_ANON_KEY: ${{ secrets.VITE_INSFORGE_ANON_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
           releaseName: "Pockira ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}"
@@ -89,6 +95,8 @@ jobs:
 
             > Windows puede mostrar "Windows protegió tu PC": pulsa **Más información → Ejecutar de todas formas**.
             > En macOS, la primera vez abre la app con **clic derecho → Abrir**.
-          releaseDraft: true
+          # Published right away: the updater only sees published releases.
+          releaseDraft: false
+          includeUpdaterJson: true
           prerelease: false
           args: ${{ matrix.args }}

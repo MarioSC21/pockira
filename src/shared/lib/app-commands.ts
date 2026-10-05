@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react"
  * (shared) only announces them; whichever screen can handle one subscribes,
  * so the title bar never imports feature modules.
  */
-export type AppCommand = "new-note" | "toggle-notes-list"
+export type AppCommand = "new-note" | "toggle-notes-list" | "check-for-updates"
 
 const COMMAND_EVENT = "pockira:command"
 

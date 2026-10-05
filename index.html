@@ -23,7 +23,41 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <!-- Shown while the JavaScript loads; React replaces it on first render.
+         Inline styles because the app stylesheet is not loaded yet. -->
+    <div id="root">
+      <div class="boot-splash" aria-hidden="true">
+        <img alt="" src="/pockira.svg" />
+      </div>
+    </div>
+    <style>
+      html.dark,
+      html.dark body {
+        background: oklch(0.145 0 0);
+      }
+      .boot-splash {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+      }
+      .boot-splash img {
+        width: 56px;
+        height: 56px;
+        animation: boot-pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes boot-pulse {
+        50% {
+          opacity: 0.5;
+          transform: scale(0.94);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-splash img {
+          animation: none;
+        }
+      }
+    </style>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

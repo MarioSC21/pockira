@@ -63,6 +63,8 @@ function writeFlag(key: string) {
 }
 
 // Closing the window only hides it to the tray; this quits for real.
+const handleCheckForUpdates = () => dispatchAppCommand("check-for-updates")
+
 const handleQuit = async () => {
   await invoke("quit_app")
 }
@@ -270,6 +272,10 @@ function DesktopTitlebar() {
                 <DropdownMenuItem onClick={handleNewNote}>
                   Nueva nota
                   <DropdownMenuShortcut>Ctrl+N</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleCheckForUpdates}>
+                  Buscar actualizaciones
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleQuit}>

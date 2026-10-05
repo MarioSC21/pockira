@@ -2,6 +2,10 @@ import type { UserSchema } from "@insforge/sdk"
 import { queryOptions, useQuery } from "@tanstack/react-query"
 
 import { readGuestMode, writeGuestMode } from "../lib/guest-mode"
+import {
+  readSessionSnapshot,
+  writeSessionSnapshot,
+} from "../lib/session-snapshot"
 import { auth } from "./api"
 import { authKeys } from "./keys"
 
@@ -11,8 +15,17 @@ export interface Session {
   isGuest: boolean
 }
 
+// Long enough not to re-ask the backend on every screen change.
+const SESSION_STALE_MS = 5 * 60 * 1000
+
 export const sessionQueryOptions = () =>
   queryOptions({
+    // The last known session lets the route guards pass at once instead of
+    // leaving the window blank while the backend answers. It is marked as
+    // already stale, so the first screen that reads it confirms it in the
+    // background (see ProtectedRoute for what happens if it was revoked).
+    initialData: readSessionSnapshot,
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<Session> => {
       const user = await auth.currentUser()
 
@@ -21,12 +34,12 @@ export const sessionQueryOptions = () =>
         writeGuestMode(false)
       }
 
-      return { isGuest: !user && readGuestMode(), user }
+      const session = { isGuest: !user && readGuestMode(), user }
+      writeSessionSnapshot(session)
+      return session
     },
     queryKey: authKeys.session(),
-    // The session only changes through the mutations below, which write the
-    // new value straight into the cache.
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: SESSION_STALE_MS,
   })
 
 export const useSession = () => useQuery(sessionQueryOptions())

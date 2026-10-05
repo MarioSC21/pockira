@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query"
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router"
 
+import { AppUpdateDialog } from "@/shared/components/custom-components/feedback/app-update-dialog"
 import { WindowTitlebar } from "@/shared/components/custom-components/layout/window-titlebar"
 
 export interface RouterContext {
@@ -15,6 +16,7 @@ function RootLayout() {
   return (
     <>
       <WindowTitlebar />
+      <AppUpdateDialog />
       {/* The screens scroll inside this box so the scrollbar starts below
           the desktop title bar instead of running underneath it. */}
       <div className="h-app mt-(--titlebar-height) overflow-auto">

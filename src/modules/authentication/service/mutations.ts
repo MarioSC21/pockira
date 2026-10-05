@@ -4,6 +4,7 @@ import type { QueryClient } from "@tanstack/react-query"
 import { isTauri } from "@tauri-apps/api/core"
 
 import { writeGuestMode } from "../lib/guest-mode"
+import { writeSessionSnapshot } from "../lib/session-snapshot"
 import { signInWithOAuthOnDesktop } from "../lib/tauri-oauth"
 import { auth } from "./api"
 import type { OAuthProvider } from "./api"
@@ -13,6 +14,7 @@ import type { Session } from "./queries"
 const WEB_OAUTH_REDIRECT_PATH = "/notes"
 
 function setSession(queryClient: QueryClient, session: Session) {
+  writeSessionSnapshot(session)
   queryClient.setQueryData<Session>(authKeys.session(), session)
 }
 
