@@ -6,7 +6,10 @@ export const noteKeys = {
     [...noteKeys.all, "collaborators", noteId] as const,
   detail: (id: string) => [...noteKeys.details(), id] as const,
   details: () => [...noteKeys.all, "detail"] as const,
+  /** Notes kept on this device by guest mode, not in the backend. */
+  device: () => [...noteKeys.all, "device"] as const,
   list: (params: Omit<ListNotesParams, "cursor">) =>
     [...noteKeys.lists(), params] as const,
   lists: () => [...noteKeys.all, "list"] as const,
+  reminders: () => [...noteKeys.all, "reminders"] as const,
 }

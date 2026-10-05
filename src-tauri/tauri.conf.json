@@ -1,20 +1,23 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "pockira-multiplatform",
+  "productName": "Pockira",
   "version": "0.1.0",
   "identifier": "com.mario.pockira-multiplatform",
   "build": {
-    "beforeDevCommand": "bun run dev",
+    "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
     "windows": [
       {
-        "title": "pockira-multiplatform",
+        "title": "Pockira",
         "width": 800,
-        "height": 600
+        "height": 600,
+        "minWidth": 480,
+        "minHeight": 400,
+        "decorations": false
       }
     ],
     "security": {

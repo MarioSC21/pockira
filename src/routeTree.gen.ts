@@ -14,6 +14,7 @@ import { Route as authAuthRouteRouteImport } from './routes/(auth)/_auth/route'
 import { Route as workspaceProtectedRouteRouteImport } from './routes/(workspace)/_protected/route'
 import { Route as authAuthLoginRouteImport } from './routes/(auth)/_auth/login'
 import { Route as workspaceProtectedNotesRouteImport } from './routes/(workspace)/_protected/notes'
+import { Route as workspaceProtectedPomodoroRouteImport } from './routes/(workspace)/_protected/pomodoro'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -38,16 +39,24 @@ const workspaceProtectedNotesRoute = workspaceProtectedNotesRouteImport.update({
   path: '/notes',
   getParentRoute: () => workspaceProtectedRouteRoute,
 } as any)
+const workspaceProtectedPomodoroRoute =
+  workspaceProtectedPomodoroRouteImport.update({
+    id: '/pomodoro',
+    path: '/pomodoro',
+    getParentRoute: () => workspaceProtectedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof authAuthLoginRoute
   '/notes': typeof workspaceProtectedNotesRoute
+  '/pomodoro': typeof workspaceProtectedPomodoroRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof authAuthLoginRoute
   '/notes': typeof workspaceProtectedNotesRoute
+  '/pomodoro': typeof workspaceProtectedPomodoroRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -56,12 +65,13 @@ export interface FileRoutesById {
   '/(workspace)/_protected': typeof workspaceProtectedRouteRouteWithChildren
   '/(auth)/_auth/login': typeof authAuthLoginRoute
   '/(workspace)/_protected/notes': typeof workspaceProtectedNotesRoute
+  '/(workspace)/_protected/pomodoro': typeof workspaceProtectedPomodoroRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/notes'
+  fullPaths: '/' | '/login' | '/notes' | '/pomodoro'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/notes'
+  to: '/' | '/login' | '/notes' | '/pomodoro'
   id:
     | '__root__'
     | '/'
@@ -69,6 +79,7 @@ export interface FileRouteTypes {
     | '/(workspace)/_protected'
     | '/(auth)/_auth/login'
     | '/(workspace)/_protected/notes'
+    | '/(workspace)/_protected/pomodoro'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -114,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof workspaceProtectedNotesRouteImport
       parentRoute: typeof workspaceProtectedRouteRoute
     }
+    '/(workspace)/_protected/pomodoro': {
+      id: '/(workspace)/_protected/pomodoro'
+      path: '/pomodoro'
+      fullPath: '/pomodoro'
+      preLoaderRoute: typeof workspaceProtectedPomodoroRouteImport
+      parentRoute: typeof workspaceProtectedRouteRoute
+    }
   }
 }
 
@@ -131,11 +149,13 @@ const authAuthRouteRouteWithChildren = authAuthRouteRoute._addFileChildren(
 
 interface workspaceProtectedRouteRouteChildren {
   workspaceProtectedNotesRoute: typeof workspaceProtectedNotesRoute
+  workspaceProtectedPomodoroRoute: typeof workspaceProtectedPomodoroRoute
 }
 
 const workspaceProtectedRouteRouteChildren: workspaceProtectedRouteRouteChildren =
   {
     workspaceProtectedNotesRoute: workspaceProtectedNotesRoute,
+    workspaceProtectedPomodoroRoute: workspaceProtectedPomodoroRoute,
   }
 
 const workspaceProtectedRouteRouteWithChildren =

@@ -1,3 +1,5 @@
+import type { UserSchema } from "@insforge/sdk"
+
 import { insforge } from "@/shared/service/insforge-client"
 
 export type OAuthProvider = "google" | "github"
@@ -36,11 +38,18 @@ export const auth = {
     return data
   },
 
-  getCurrentUser() {
-    return insforge.auth.getCurrentUser()
+  /** The signed-in user, or null when there is no valid session. */
+  async currentUser(): Promise<UserSchema | null> {
+    const { data, error } = await insforge.auth.getCurrentUser()
+
+    return error ? null : (data?.user ?? null)
   },
 
-  logout() {
-    return insforge.auth.signOut()
+  async logout() {
+    const { error } = await insforge.auth.signOut()
+
+    if (error) {
+      throw new Error(error.message)
+    }
   },
 }

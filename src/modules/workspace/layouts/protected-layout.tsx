@@ -1,9 +1,11 @@
 import { Link, Outlet } from "@tanstack/react-router"
-import { FileText } from "lucide-react"
+import { FileText, TimerIcon } from "lucide-react"
+import type { ReactNode } from "react"
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -17,12 +19,27 @@ import {
 
 const navigationItems = [
   { icon: FileText, label: "Mis notas", to: "/notes" },
+  { icon: TimerIcon, label: "Pomodoro", to: "/pomodoro" },
 ] as const
 
-export function ProtectedLayout() {
+interface ProtectedLayoutProps {
+  /** Account controls pinned to the bottom of the sidebar. */
+  footer?: ReactNode
+}
+
+export function ProtectedLayout({ footer }: ProtectedLayoutProps) {
   return (
-    <SidebarProvider onOpenChange={() => null} open={false}>
-      <Sidebar collapsible="icon">
+    // h-app / top offset: the desktop title bar takes the top of the window,
+    // so the sidebar and the content fit below it instead of the full viewport.
+    <SidebarProvider
+      className="h-app min-h-0"
+      onOpenChange={() => null}
+      open={false}
+    >
+      <Sidebar
+        className="top-(--titlebar-height) bottom-0 h-auto"
+        collapsible="icon"
+      >
         <SidebarHeader>
           <Link
             className="flex items-center gap-2 px-2 group-data-[collapsible=icon]:px-0"
@@ -56,14 +73,15 @@ export function ProtectedLayout() {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        {footer ? <SidebarFooter>{footer}</SidebarFooter> : null}
       </Sidebar>
       {/* min-w-0: the inset is a flex item next to the sidebar and defaults to
           min-width:auto, so its content width pushed the page wider than the
           viewport and produced a horizontal scrollbar.
-          h-svh: the screens inside size themselves against this height, so it
+          h-app: the screens inside size themselves against this height, so it
           has to be definite -- a percentage or inline height:100% resolves to
           auto otherwise and the page scrolls instead of the panels. */}
-      <SidebarInset className="h-svh min-w-0 overflow-hidden">
+      <SidebarInset className="h-app min-w-0 overflow-hidden">
         <main className="min-h-0 min-w-0 flex-1">
           <Outlet />
         </main>

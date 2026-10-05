@@ -8,6 +8,7 @@ import type {
   Reminder,
   ReminderRepeatInterval,
   TiptapDoc,
+  UpcomingReminder,
 } from "../types/note"
 
 export interface NoteCursor {
@@ -94,6 +95,26 @@ export const note = {
     return data as Note
   },
 
+  /** Creates several notes in one request (used to upload a guest's notes). */
+  async createMany(
+    inputs: { title: string; content: TiptapDoc }[]
+  ): Promise<Note[]> {
+    if (inputs.length === 0) {
+      return []
+    }
+
+    const { data, error } = await insforge.database
+      .from("notes")
+      .insert(inputs)
+      .select()
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return (data ?? []) as Note[]
+  },
+
   async update(
     id: string,
     input: Partial<{ title: string; content: TiptapDoc }>
@@ -110,6 +131,32 @@ export const note = {
     }
 
     return data as Note
+  },
+
+  /** Turns pending invitations sent to the signed-in email into access.
+      Returns how many were claimed. */
+  async claimInvitations(): Promise<number> {
+    const { data, error } = await insforge.database.rpc(
+      "claim_note_invitations"
+    )
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return typeof data === "number" ? data : 0
+  },
+
+  /** Soft delete: the row stays for the owner's history and RLS hides it. */
+  async remove(id: string): Promise<void> {
+    const { error } = await insforge.database
+      .from("notes")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id)
+
+    if (error) {
+      throw new Error(error.message)
+    }
   },
 
   async share(
@@ -156,6 +203,33 @@ export const note = {
     }
 
     return (data ?? []) as NoteAccess[]
+  },
+
+  /** The signed-in person's scheduled reminders (RLS limits them to their own
+      on notes they can still read), with each note's title. */
+  async upcomingReminders(): Promise<UpcomingReminder[]> {
+    const { data, error } = await insforge.database
+      .from("reminders")
+      .select(
+        "id, note_id, user_id, remind_at, repeat_interval, status, created_at, completed_at, notes(title)"
+      )
+      .eq("status", "scheduled")
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    // reminders → notes is many-to-one, so PostgREST embeds a single object;
+    // the SDK's inferred type says array, so both shapes are accepted.
+    type EmbeddedNote = { title: string } | { title: string }[] | null
+    const rows = (data ?? []) as unknown as (Reminder & {
+      notes: EmbeddedNote
+    })[]
+
+    return rows.map(({ notes, ...reminder }) => ({
+      ...reminder,
+      note_title: (Array.isArray(notes) ? notes[0]?.title : notes?.title) ?? "",
+    }))
   },
 
   async createReminder(

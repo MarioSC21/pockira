@@ -10,8 +10,9 @@ export interface Note {
   content: TiptapDoc
   created_at: string
   updated_at: string
-  is_owner: boolean
-  is_shared: boolean
+  /** Computed by list_notes; a plain row read from the table lacks them. */
+  is_owner?: boolean
+  is_shared?: boolean
 }
 
 export type NoteScope = "all" | "personal" | "shared"
@@ -43,4 +44,9 @@ export interface Reminder {
   status: ReminderStatus
   created_at: string
   completed_at: string | null
+}
+
+/** A scheduled reminder plus the title of its note, for notifications. */
+export interface UpcomingReminder extends Reminder {
+  note_title: string
 }

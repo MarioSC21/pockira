@@ -1,0 +1,94 @@
+# Builds the desktop app on Windows, macOS and Linux and attaches the
+# installers to a GitHub Release.
+#
+# Release a version:
+#   1. Bump "version" in src-tauri/tauri.conf.json (e.g. 0.2.0).
+#   2. git tag v0.2.0 && git push origin v0.2.0
+#   3. When the run finishes, review the draft under Releases and publish it.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
+name: Release desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: ""
+          - name: macOS (Apple Silicon)
+            platform: macos-latest
+            args: "--target aarch64-apple-darwin"
+          - name: macOS (Intel)
+            platform: macos-latest
+            args: "--target x86_64-apple-darwin"
+          - name: Linux
+            platform: ubuntu-22.04
+            args: ""
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Both Mac targets are built on the same Apple Silicon runner.
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build and upload to the release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VITE_INSFORGE_URL: ${{ secrets.VITE_INSFORGE_URL }}
+          VITE_INSFORGE_ANON_KEY: ${{ secrets.VITE_INSFORGE_ANON_KEY }}
+        with:
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}
+          releaseName: "Pockira ${{ github.ref_type == 'tag' && github.ref_name || 'v__VERSION__' }}"
+          releaseBody: |
+            ## Descargas
+            - **Windows:** `Pockira_*_x64-setup.exe` (o el `.msi`)
+            - **macOS:** `Pockira_*_aarch64.dmg` (Apple Silicon) o `Pockira_*_x64.dmg` (Intel)
+            - **Linux:** `.AppImage` o `.deb`
+
+            > Windows puede mostrar "Windows protegió tu PC": pulsa **Más información → Ejecutar de todas formas**.
+            > En macOS, la primera vez abre la app con **clic derecho → Abrir**.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

@@ -120,11 +120,58 @@
   --highlight: oklch(0.852 0.199 91.936);
 }
 
+/* The viewport minus the desktop title bar: what full-height screens fill. */
+@utility h-app {
+  height: calc(100svh - var(--titlebar-height));
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Room taken by the desktop title bar (WindowTitlebar); zero on the web
+     and on mobile, where the system draws its own chrome. */
+  :root {
+    --titlebar-height: 0px;
+  }
+  :root[data-titlebar="custom"] {
+    --titlebar-height: 2.5rem;
+  }
+
+  /* Native scrollbars (page, dropdowns, anything outside <ScrollArea>) match
+     the ScrollArea thumb: a thin rounded pill, no track and no arrow buttons,
+     instead of the default grey Windows bar. */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+  }
+  ::-webkit-scrollbar-thumb {
+    /* The transparent border insets the pill so it reads thinner. */
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 35%,
+      transparent
+    );
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(
+      in oklch,
+      var(--muted-foreground) 60%,
+      transparent
+    );
   }
 }

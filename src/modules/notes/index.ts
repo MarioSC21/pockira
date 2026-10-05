@@ -1,4 +1,5 @@
 export { NotesScreen } from "./screens/notes-screen"
+export type { NotesSource } from "./screens/notes-screen"
 export { note } from "./service/api"
 export type {
   ListNotesParams,
@@ -8,7 +9,9 @@ export type {
 export { noteKeys } from "./service/keys"
 export {
   useCreateNote,
+  useClaimNoteInvitations,
   useCreateReminder,
+  useDeleteNote,
   useShareNote,
   useUpdateNote,
 } from "./service/mutations"

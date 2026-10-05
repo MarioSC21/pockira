@@ -2,6 +2,8 @@
 allowed_redirect_urls = [
   "http://localhost:1420/notes",
   "pockira://auth-callback",
+  "http://localhost:17345/auth-callback",
+  "http://localhost:17346/auth-callback",
 ]
 require_email_verification = true
 verify_email_method = "code"

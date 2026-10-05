@@ -1,54 +1,119 @@
 import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useRef } from "react"
+
+import { Button } from "@/shared/components/ui/button"
+import { Separator } from "@/shared/components/ui/separator"
 
 import { OAuthButton } from "../components/oauth-button"
-import { useAuth } from "../context/auth-context"
-
-function toErrorMessage(error: unknown, fallback: string) {
-  return error instanceof Error ? error.message : fallback
-}
+import { OAuthCancelledError } from "../lib/tauri-oauth"
+import { useContinueAsGuest, useSignInWithOAuth } from "../service/mutations"
 
 export function LoginScreen() {
-  const { signInWithOAuth } = useAuth()
   const navigate = useNavigate()
+  const signInWithOAuth = useSignInWithOAuth()
+  const continueAsGuest = useContinueAsGuest()
 
-  const [error, setError] = useState<string | null>(null)
-  const [isSigningIn, setIsSigningIn] = useState(false)
+  // Waiting for the browser (desktop Google sign-in) does not lock the guest
+  // option: the person may have closed that tab, so it cancels the wait.
+  const isWaitingForGoogle = signInWithOAuth.isPending
+  const error =
+    signInWithOAuth.error instanceof OAuthCancelledError
+      ? null
+      : (signInWithOAuth.error ?? continueAsGuest.error)
 
-  async function handleGoogleSignIn() {
-    setError(null)
-    setIsSigningIn(true)
+  const googleAbortRef = useRef<AbortController | null>(null)
 
-    try {
-      await signInWithOAuth("google")
-      await navigate({ to: "/notes" })
-    } catch (signInError) {
-      setIsSigningIn(false)
-      setError(toErrorMessage(signInError, "No se pudo iniciar sesión"))
+  const cancelGoogle = () => {
+    googleAbortRef.current?.abort()
+    googleAbortRef.current = null
+  }
+
+  // Leaving the screen frees the loopback port instead of waiting it out.
+  useEffect(() => () => googleAbortRef.current?.abort(), [])
+
+  const goToNotes = () => navigate({ replace: true, to: "/notes" })
+
+  const handleGoogle = async () => {
+    cancelGoogle()
+    const controller = new AbortController()
+    googleAbortRef.current = controller
+
+    const user = await signInWithOAuth
+      .mutateAsync({ provider: "google", signal: controller.signal })
+      .catch(() => null)
+
+    // On the web the browser is already on its way to Google.
+    if (user) {
+      await goToNotes()
     }
   }
 
+  const handleGuest = async () => {
+    cancelGoogle()
+    await continueAsGuest.mutateAsync()
+    await goToNotes()
+  }
+
   return (
-    <div className="bg-background flex min-h-svh items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6">
-        <div className="space-y-1 text-center">
-          <h1 className="text-foreground text-xl font-semibold">
-            Iniciar sesión
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Entra a tu cuenta de Pockira con Google
-          </p>
+    <div className="bg-background flex min-h-full items-center justify-center px-4 py-10">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <img alt="Pockira" className="size-12" src="/pockira.svg" />
+          <div className="flex flex-col gap-1">
+            <h1 className="text-foreground font-heading text-xl font-semibold">
+              Iniciar sesión
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Entra con Google para sincronizar tus notas
+            </p>
+          </div>
         </div>
 
         {error ? (
-          <p className="text-destructive text-center text-sm">{error}</p>
+          <p className="text-destructive text-center text-sm" role="alert">
+            {error.message}
+          </p>
         ) : null}
 
-        <OAuthButton
-          disabled={isSigningIn}
-          onClick={handleGoogleSignIn}
-          provider="google"
-        />
+        {isWaitingForGoogle ? (
+          <div className="flex flex-col items-center gap-2 text-center">
+            <p className="text-muted-foreground text-sm">
+              Completa el inicio de sesión en tu navegador…
+            </p>
+            <Button
+              className="w-full"
+              onClick={cancelGoogle}
+              type="button"
+              variant="outline"
+            >
+              Cancelar
+            </Button>
+          </div>
+        ) : (
+          <OAuthButton
+            disabled={continueAsGuest.isPending}
+            onClick={handleGoogle}
+            provider="google"
+          />
+        )}
+
+        <Separator />
+
+        <div className="flex flex-col gap-2">
+          <Button
+            className="w-full"
+            disabled={continueAsGuest.isPending}
+            onClick={handleGuest}
+            type="button"
+            variant="ghost"
+          >
+            Ingresar sin iniciar sesión
+          </Button>
+          <p className="text-muted-foreground text-center text-xs">
+            Tus notas se guardarán solo en este dispositivo y no se
+            sincronizarán.
+          </p>
+        </div>
       </div>
     </div>
   )

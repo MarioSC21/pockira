@@ -1,11 +1,11 @@
 import { XIcon } from "lucide-react"
 
-import type { DemoNote } from "@/modules/notes/lib/demo-notes"
+import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
 import { cn } from "@/shared/lib/utils"
 
 interface NoteTabsBarProps {
-  notes: DemoNote[]
+  notes: WorkspaceNote[]
   activeNoteId: string | undefined
   onSelectTab: (id: string) => void
   onCloseTab: (id: string) => void

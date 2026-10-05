@@ -10,8 +10,6 @@ import { useState } from "react"
 
 import { DeleteNoteDialog } from "@/modules/notes/components/delete-note-dialog"
 import { NotesWeekCalendar } from "@/modules/notes/components/notes-week-calendar"
-import type { DemoNote } from "@/modules/notes/lib/demo-notes"
-import { noteTags } from "@/modules/notes/lib/demo-notes"
 import { extractText } from "@/modules/notes/lib/note-body"
 import {
   describeEmptyList,
@@ -22,6 +20,8 @@ import type {
   NoteFilter,
   NoteFilterTab,
 } from "@/modules/notes/lib/note-filters"
+import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
+import { noteTags } from "@/modules/notes/lib/workspace-note"
 import { Badge } from "@/shared/components/ui/badge"
 import { Button } from "@/shared/components/ui/button"
 import {
@@ -34,7 +34,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs"
 import { cn } from "@/shared/lib/utils"
 
 interface NotesListPanelProps {
-  notes: DemoNote[]
+  notes: WorkspaceNote[]
+  isLoading: boolean
+  error: string | null
+  hasMore: boolean
+  isLoadingMore: boolean
+  onLoadMore: () => void
   selectedDate: Date
   selectedNoteId: string | undefined
   filter: NoteFilter
@@ -50,6 +55,11 @@ interface NotesListPanelProps {
 
 export function NotesListPanel({
   notes,
+  isLoading,
+  error,
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
   selectedDate,
   selectedNoteId,
   filter,
@@ -102,7 +112,20 @@ export function NotesListPanel({
       <div className="relative min-h-0 w-full flex-1">
         <ScrollArea className="h-full">
           <div className="flex flex-col gap-3 p-4 pb-16">
-            {orderedNotes.length === 0 && (
+            {error ? (
+              <p
+                className="text-destructive py-2 text-center text-sm"
+                role="alert"
+              >
+                {error}
+              </p>
+            ) : null}
+            {isLoading ? (
+              <p className="text-muted-foreground py-8 text-center text-sm">
+                Cargando notas…
+              </p>
+            ) : null}
+            {!isLoading && orderedNotes.length === 0 && (
               <p className="text-muted-foreground py-8 text-center text-sm">
                 {describeEmptyList(filter, search)}
               </p>
@@ -117,6 +140,15 @@ export function NotesListPanel({
                 onTogglePin={() => onTogglePin(note.id)}
               />
             ))}
+            {hasMore ? (
+              <Button
+                disabled={isLoadingMore}
+                onClick={onLoadMore}
+                variant="ghost"
+              >
+                {isLoadingMore ? "Cargando…" : "Cargar más"}
+              </Button>
+            ) : null}
           </div>
         </ScrollArea>
         <Button
@@ -149,7 +181,7 @@ function NoteListCard({
   onTogglePin,
   onRequestDelete,
 }: {
-  note: DemoNote
+  note: WorkspaceNote
   isActive: boolean
   onSelect: () => void
   onTogglePin: () => void
@@ -185,16 +217,18 @@ function NoteListCard({
       </button>
       {/* h-5 matches the title's line-height so the icons center on it. */}
       <div className="absolute top-3 right-3 flex h-5 items-center gap-2">
-        <button
-          aria-label="Eliminar nota"
-          className="text-muted-foreground/50 hover:text-destructive rounded-sm"
-          onClick={onRequestDelete}
-          type="button"
-        >
-          {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's
+        {note.isOwner ? (
+          <button
+            aria-label="Eliminar nota"
+            className="text-muted-foreground/50 hover:text-destructive rounded-sm"
+            onClick={onRequestDelete}
+            type="button"
+          >
+            {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's
               14px it reads as bigger and lower than it. */}
-          <Trash2Icon className="size-3" />
-        </button>
+            <Trash2Icon className="size-3" />
+          </button>
+        ) : null}
         <button
           aria-label={note.pinned ? "Dejar de fijar nota" : "Fijar nota"}
           aria-pressed={note.pinned}

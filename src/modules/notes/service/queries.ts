@@ -8,6 +8,7 @@ import {
 import { note } from "./api"
 import type { ListNotesParams, ListNotesResult, NoteCursor } from "./api"
 import { noteKeys } from "./keys"
+import { loadDeviceNotesWorkspace } from "./notes-workspace-store"
 
 export const notesListQueryOptions = (
   params: Omit<ListNotesParams, "cursor">
@@ -39,3 +40,25 @@ export const noteCollaboratorsQueryOptions = (noteId: string) =>
 
 export const useNoteCollaborators = (noteId: string) =>
   useQuery(noteCollaboratorsQueryOptions(noteId))
+
+export const deviceNotesQueryOptions = () =>
+  queryOptions({
+    queryFn: async () => {
+      const workspace = await loadDeviceNotesWorkspace()
+      return workspace?.notes ?? []
+    },
+    queryKey: noteKeys.device(),
+  })
+
+export const useDeviceNotes = () => useQuery(deviceNotesQueryOptions())
+
+export const upcomingRemindersQueryOptions = () =>
+  queryOptions({
+    queryFn: note.upcomingReminders,
+    queryKey: noteKeys.reminders(),
+    // Picks up reminders created on other devices while this one stays open.
+    refetchInterval: 5 * 60 * 1000,
+  })
+
+export const useUpcomingReminders = () =>
+  useQuery(upcomingRemindersQueryOptions())

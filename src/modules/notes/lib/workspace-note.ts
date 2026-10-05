@@ -1,0 +1,44 @@
+import { format } from "date-fns"
+import { es } from "date-fns/locale"
+import type { Value } from "platejs"
+
+export interface WorkspaceNoteTag {
+  label: string
+  icon?: "lock" | "clock"
+}
+
+/** A note as the screen works with it, whether it lives on this device or in
+    the backend. */
+export interface WorkspaceNote {
+  id: string
+  title: string
+  body: Value
+  pinned: boolean
+  /** Day the note belongs to: what the calendar and the "Hoy" tab filter on. */
+  createdAt: Date
+  /** Drives the "Personales" / "Compartidas" tabs. */
+  shared: boolean
+  /** Only the owner may delete or share a note. */
+  isOwner: boolean
+}
+
+export type WorkspaceNotePatch = Partial<Pick<WorkspaceNote, "title" | "body">>
+
+export function formatNoteDate(date: Date) {
+  return format(date, "d MMM", { locale: es })
+}
+
+export function formatNoteTime(date: Date) {
+  return format(date, "h:mmaaa")
+}
+
+/** Badges shown on the list card and in the editor header. */
+export function noteTags(note: WorkspaceNote): WorkspaceNoteTag[] {
+  return [
+    {
+      icon: note.shared ? undefined : "lock",
+      label: formatNoteDate(note.createdAt),
+    },
+    { icon: "clock", label: formatNoteTime(note.createdAt) },
+  ]
+}

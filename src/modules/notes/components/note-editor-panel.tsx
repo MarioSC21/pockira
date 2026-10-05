@@ -13,10 +13,10 @@ import { DeleteNoteDialog } from "@/modules/notes/components/delete-note-dialog"
 import { NoteTabsBar } from "@/modules/notes/components/note-tabs-bar"
 import { ReminderDialog } from "@/modules/notes/components/reminder-dialog"
 import { ShareNoteDialog } from "@/modules/notes/components/share-note-dialog"
-import type { DemoNote } from "@/modules/notes/lib/demo-notes"
-import { noteTags } from "@/modules/notes/lib/demo-notes"
 import { noteEditorKit } from "@/modules/notes/lib/note-editor-kit"
-import type { NotesSaveStatus } from "@/modules/notes/lib/use-notes-workspace"
+import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
+import { noteTags } from "@/modules/notes/lib/workspace-note"
+import type { NotesSaveStatus } from "@/modules/notes/types/notes-workspace"
 import {
   Editor,
   EditorContainer,
@@ -30,23 +30,30 @@ import {
 } from "@/shared/components/ui/dropdown-menu"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
 
+const SAVE_STATUS_LABEL: Record<NotesSaveStatus, string> = {
+  error: "Error al guardar",
+  saved: "Guardado",
+  saving: "Guardando…",
+}
+
 interface NoteEditorPanelProps {
-  note: DemoNote | undefined
-  openNotes: DemoNote[]
+  /** Sharing and reminders need an account; guests do not see them. */
+  canCollaborate: boolean
+  note: WorkspaceNote | undefined
+  openNotes: WorkspaceNote[]
   onUpdateNote: (
     id: string,
-    patch: Partial<Pick<DemoNote, "title" | "body">>
+    patch: Partial<Pick<WorkspaceNote, "title" | "body">>
   ) => void
   onSelectTab: (id: string) => void
   onCloseTab: (id: string) => void
   onDeleteNote: (id: string) => void
   onToggleList: () => void
-  /** Null on builds without on-device persistence, where there is no local
-      save to report. */
   saveStatus: NotesSaveStatus | null
 }
 
 export function NoteEditorPanel({
+  canCollaborate,
   note,
   openNotes,
   onUpdateNote,
@@ -95,42 +102,64 @@ export function NoteEditorPanel({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {saveStatus && (
-            <span className="text-muted-foreground text-xs">
-              {saveStatus === "saving" ? "Guardando…" : "Guardado"}
+            <span
+              className={
+                saveStatus === "error"
+                  ? "text-destructive text-xs"
+                  : "text-muted-foreground text-xs"
+              }
+            >
+              {SAVE_STATUS_LABEL[saveStatus]}
             </span>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button size="icon" variant="ghost" />}
-            >
-              <MoreHorizontalIcon />
-            </DropdownMenuTrigger>
-            {/* w-auto: the base class sizes the menu to w-(--anchor-width),
-                which here is a 32px icon button, so it fell back to min-w-32
-                and wrapped every label onto two lines. */}
-            <DropdownMenuContent className="w-auto">
-              <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
-                <Share2Icon /> Compartir nota
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setIsReminderOpen(true)}>
-                <BellIcon /> Recordatorio
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setIsDeleteOpen(true)}
-                variant="destructive"
+          {note && (canCollaborate || note.isOwner) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={<Button size="icon" variant="ghost" />}
               >
-                <Trash2Icon /> Eliminar nota
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <MoreHorizontalIcon />
+              </DropdownMenuTrigger>
+              {/* w-auto: the base class sizes the menu to w-(--anchor-width),
+                  which here is a 32px icon button, so it fell back to min-w-32
+                  and wrapped every label onto two lines. */}
+              <DropdownMenuContent className="w-auto">
+                {canCollaborate && note.isOwner && (
+                  <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
+                    <Share2Icon /> Compartir nota
+                  </DropdownMenuItem>
+                )}
+                {canCollaborate && (
+                  <DropdownMenuItem onClick={() => setIsReminderOpen(true)}>
+                    <BellIcon /> Recordatorio
+                  </DropdownMenuItem>
+                )}
+                {note.isOwner && (
+                  <DropdownMenuItem
+                    onClick={() => setIsDeleteOpen(true)}
+                    variant="destructive"
+                  >
+                    <Trash2Icon /> Eliminar nota
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </header>
-      <ShareNoteDialog
-        onOpenChange={setIsShareOpen}
-        open={isShareOpen}
-        shareUrl="pockira.app/n/hbi-plan-34"
-      />
-      <ReminderDialog onOpenChange={setIsReminderOpen} open={isReminderOpen} />
+      {note && canCollaborate && (
+        <>
+          <ShareNoteDialog
+            noteId={note.id}
+            onOpenChange={setIsShareOpen}
+            open={isShareOpen}
+          />
+          <ReminderDialog
+            noteId={note.id}
+            onOpenChange={setIsReminderOpen}
+            open={isReminderOpen}
+          />
+        </>
+      )}
       {note && (
         <DeleteNoteDialog
           onConfirm={() => onDeleteNote(note.id)}
@@ -153,10 +182,10 @@ function NoteEditorBody({
   note,
   onUpdateNote,
 }: {
-  note: DemoNote
+  note: WorkspaceNote
   onUpdateNote: (
     id: string,
-    patch: Partial<Pick<DemoNote, "title" | "body">>
+    patch: Partial<Pick<WorkspaceNote, "title" | "body">>
   ) => void
 }) {
   const editor = usePlateEditor({

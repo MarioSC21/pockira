@@ -1,18 +1,22 @@
 import { useState } from "react"
 import { usePanelRef } from "react-resizable-panels"
 
+import { ImportDeviceNotesDialog } from "@/modules/notes/components/import-device-notes-dialog"
 import { NoteEditorPanel } from "@/modules/notes/components/note-editor-panel"
 import { NotesListPanel } from "@/modules/notes/components/notes-list-panel"
-import type { DemoNote } from "@/modules/notes/lib/demo-notes"
-import { ALL_NOTES_FILTER, filterNotes } from "@/modules/notes/lib/note-filters"
+import { useAccountNotesWorkspace } from "@/modules/notes/hooks/use-account-notes-workspace"
+import { useDeviceNotesWorkspace } from "@/modules/notes/hooks/use-device-notes-workspace"
+import { useReminderNotifications } from "@/modules/notes/hooks/use-reminder-notifications"
+import { ALL_NOTES_FILTER } from "@/modules/notes/lib/note-filters"
 import type { NoteFilter } from "@/modules/notes/lib/note-filters"
-import { useNotesWorkspace } from "@/modules/notes/lib/use-notes-workspace"
+import type { NotesWorkspace } from "@/modules/notes/types/notes-workspace"
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/shared/components/ui/resizable"
 import { useIsMobile } from "@/shared/hooks/use-mobile"
+import { useAppCommand } from "@/shared/lib/app-commands"
 import { cn } from "@/shared/lib/utils"
 
 // Pixel constraints for the notes list panel: the default matches the width the
@@ -21,34 +25,83 @@ const LIST_PANEL_DEFAULT_WIDTH = 320
 const LIST_PANEL_MIN_WIDTH = 240
 const LIST_PANEL_MAX_WIDTH = 560
 
-export function NotesScreen() {
-  const isMobile = useIsMobile()
-  const listPanelRef = usePanelRef()
+/** "account": notes synced with the backend. "device": guest notes kept only
+    on this device. */
+export type NotesSource = "account" | "device"
+
+interface NotesScreenProps {
+  source: NotesSource
+}
+
+export function NotesScreen({ source }: NotesScreenProps) {
+  return source === "account" ? <AccountNotesScreen /> : <DeviceNotesScreen />
+}
+
+function useNotesListControls() {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [filter, setFilter] = useState<NoteFilter>(ALL_NOTES_FILTER)
   const [search, setSearch] = useState("")
+
+  return {
+    filter,
+    search,
+    selectedDate,
+    setFilter,
+    setSearch,
+    setSelectedDate,
+  }
+}
+
+type NotesListControls = ReturnType<typeof useNotesListControls>
+
+function AccountNotesScreen() {
+  const controls = useNotesListControls()
+  const workspace = useAccountNotesWorkspace(controls)
+  useReminderNotifications()
+
+  return (
+    <>
+      <NotesWorkspaceView controls={controls} workspace={workspace} />
+      <ImportDeviceNotesDialog />
+    </>
+  )
+}
+
+function DeviceNotesScreen() {
+  const controls = useNotesListControls()
+  const workspace = useDeviceNotesWorkspace(controls)
+
+  return <NotesWorkspaceView controls={controls} workspace={workspace} />
+}
+
+function NotesWorkspaceView({
+  controls,
+  workspace,
+}: {
+  controls: NotesListControls
+  workspace: NotesWorkspace
+}) {
+  const isMobile = useIsMobile()
+  const listPanelRef = usePanelRef()
   const [isListOpen, setIsListOpen] = useState(true)
   const {
-    notes,
-    openNoteIds,
-    saveStatus,
-    selectedNoteId,
-    setNotes,
-    setOpenNoteIds,
-    setSelectedNoteId,
-  } = useNotesWorkspace()
-
-  const selectedNote = notes.find((note) => note.id === selectedNoteId)
-  const openNotes = openNoteIds
-    .map((id) => notes.find((note) => note.id === id))
-    .filter((note): note is DemoNote => note !== undefined)
-  // Filtering only hides notes from the list: an open note stays open in its
-  // tab even when the current filter no longer matches it.
-  const visibleNotes = filterNotes(notes, filter, search)
+    filter,
+    search,
+    selectedDate,
+    setFilter,
+    setSearch,
+    setSelectedDate,
+  } = controls
+  const {
+    closeTab: handleCloseTab,
+    deleteNote: handleDeleteNote,
+    loadMore: handleLoadMore,
+    togglePin: handleTogglePin,
+    updateNote: handleUpdateNote,
+  } = workspace
 
   const handleSelectNote = (id: string) => {
-    setSelectedNoteId(id)
-    setOpenNoteIds((prev) => (prev.includes(id) ? prev : [...prev, id]))
+    workspace.selectNote(id)
     if (isMobile) {
       setIsListOpen(false)
     }
@@ -86,88 +139,60 @@ export function NotesScreen() {
     }
   }
 
-  const handleCreateNote = () => {
-    const createdAt = new Date()
-    const newNote: DemoNote = {
-      id: crypto.randomUUID(),
-      title: "",
-      body: [{ children: [{ text: "" }], type: "p" }],
-      pinned: false,
-      createdAt,
-      shared: false,
+  const handleCreateNote = async () => {
+    const created = await workspace.createNote()
+
+    if (!created) {
+      return
     }
-    setNotes((prev) => [newNote, ...prev])
+
     // The note is created for today, so move the list there instead of leaving
     // it filtered out of view.
     setSearch("")
-    setSelectedDate(createdAt)
-    setFilter({ date: createdAt, kind: "day" })
-    handleSelectNote(newNote.id)
-  }
-
-  const handleTogglePin = (id: string) => {
-    setNotes((prev) => [
-      ...prev
-        .filter((note) => note.id === id)
-        .map((note) => ({ ...note, pinned: !note.pinned })),
-      ...prev.filter((note) => note.id !== id),
-    ])
-  }
-
-  const handleCloseTab = (id: string) => {
-    const closingIndex = openNoteIds.indexOf(id)
-    const nextOpenNoteIds = openNoteIds.filter(
-      (openNoteId) => openNoteId !== id
-    )
-    setOpenNoteIds(nextOpenNoteIds)
-
-    if (id === selectedNoteId) {
-      const nextNoteId = nextOpenNoteIds[closingIndex] ?? nextOpenNoteIds.at(-1)
-      setSelectedNoteId(nextNoteId)
+    setSelectedDate(created.createdAt)
+    setFilter({ date: created.createdAt, kind: "day" })
+    if (isMobile) {
+      setIsListOpen(false)
     }
   }
 
-  const handleUpdateNote = (
-    id: string,
-    patch: Partial<Pick<DemoNote, "title" | "body">>
-  ) => {
-    setNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, ...patch } : note))
-    )
-  }
-
-  const handleDeleteNote = (id: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id))
-    handleCloseTab(id)
-  }
+  // The desktop menu (and its shortcuts) drive the same actions.
+  useAppCommand("new-note", handleCreateNote)
+  useAppCommand("toggle-notes-list", handleToggleList)
 
   const listPanel = (
     <NotesListPanel
+      error={workspace.error}
       filter={filter}
-      notes={visibleNotes}
+      hasMore={workspace.hasMore}
+      isLoading={workspace.isLoading}
+      isLoadingMore={workspace.isLoadingMore}
+      notes={workspace.notes}
       onCreateNote={handleCreateNote}
       onDeleteNote={handleDeleteNote}
       onFilterChange={handleFilterChange}
+      onLoadMore={handleLoadMore}
       onSearchChange={setSearch}
       onSelectDate={handleSelectDate}
       onSelectNote={handleSelectNote}
       onTogglePin={handleTogglePin}
       search={search}
       selectedDate={selectedDate}
-      selectedNoteId={selectedNoteId}
+      selectedNoteId={workspace.selectedNote?.id}
     />
   )
 
   const editorPanel = (
     <NoteEditorPanel
-      note={selectedNote}
+      canCollaborate={workspace.canCollaborate}
+      note={workspace.selectedNote}
       onCloseTab={handleCloseTab}
       onDeleteNote={handleDeleteNote}
       onSelectTab={handleSelectNote}
       onToggleList={handleToggleList}
       onUpdateNote={handleUpdateNote}
-      openNotes={openNotes}
-      saveStatus={saveStatus}
+      openNotes={workspace.openNotes}
+      saveStatus={workspace.saveStatus}
     />
   )
 

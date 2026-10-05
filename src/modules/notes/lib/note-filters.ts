@@ -1,7 +1,7 @@
 import { isSameDay, isToday } from "date-fns"
 
-import type { DemoNote } from "@/modules/notes/lib/demo-notes"
 import { extractText } from "@/modules/notes/lib/note-body"
+import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
 
 // "Hoy" is just the day filter pointing at today, so pressing the tab and
 // picking today on the calendar land on the same state.
@@ -51,7 +51,7 @@ export function tabToFilter(tab: NoteFilterTab): NoteFilter {
   }
 }
 
-function matchesFilter(note: DemoNote, filter: NoteFilter) {
+function matchesFilter(note: WorkspaceNote, filter: NoteFilter) {
   switch (filter.kind) {
     case "day": {
       return isSameDay(note.createdAt, filter.date)
@@ -68,7 +68,7 @@ function matchesFilter(note: DemoNote, filter: NoteFilter) {
   }
 }
 
-function matchesSearch(note: DemoNote, search: string) {
+function matchesSearch(note: WorkspaceNote, search: string) {
   const needle = search.trim().toLowerCase()
 
   if (!needle) {
@@ -81,7 +81,7 @@ function matchesSearch(note: DemoNote, search: string) {
 }
 
 export function filterNotes(
-  notes: DemoNote[],
+  notes: WorkspaceNote[],
   filter: NoteFilter,
   search: string
 ) {
