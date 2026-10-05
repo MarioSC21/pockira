@@ -1,4 +1,5 @@
 import { useCanGoBack, useRouter } from "@tanstack/react-router"
+import { getVersion } from "@tauri-apps/api/app"
 import { invoke } from "@tauri-apps/api/core"
 import { getCurrentWebview } from "@tauri-apps/api/webview"
 import { getCurrentWindow } from "@tauri-apps/api/window"
@@ -18,7 +19,9 @@ import { Button } from "@/shared/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
@@ -122,6 +125,25 @@ function DesktopTitlebar() {
   const canGoBack = useCanGoBack()
   const [isMaximized, setIsMaximized] = useState(false)
   const [zoom, setZoom] = useState(readZoom)
+  const [version, setVersion] = useState<string | null>(null)
+
+  // The installed version, shown at the bottom of the app menu.
+  useEffect(() => {
+    let isActive = true
+
+    const loadVersion = async () => {
+      const installed = await getVersion()
+      if (isActive) {
+        setVersion(installed)
+      }
+    }
+
+    void loadVersion()
+
+    return () => {
+      isActive = false
+    }
+  }, [])
 
   const appWindow = getCurrentWindow()
 
@@ -332,6 +354,14 @@ function DesktopTitlebar() {
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
             </DropdownMenuSub>
+            {version ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Versión {version}</DropdownMenuLabel>
+                </DropdownMenuGroup>
+              </>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         <Button
