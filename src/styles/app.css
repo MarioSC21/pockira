@@ -120,6 +120,175 @@
   --highlight: oklch(0.852 0.199 91.936);
 }
 
+/* Catppuccin (https://catppuccin.com/palette): each flavor sets the raw
+   palette and one shared block maps it onto the design tokens. The extra
+   attribute selector outranks .dark, which the dark flavors also carry. */
+:root[data-theme="catppuccin-latte"] {
+  --ctp-base: #eff1f5;
+  --ctp-mantle: #e6e9ef;
+  --ctp-surface0: #ccd0da;
+  --ctp-surface1: #bcc0cc;
+  --ctp-subtext0: #6c6f85;
+  --ctp-text: #4c4f69;
+  --ctp-mauve: #8839ef;
+  --ctp-lavender: #7287fd;
+  --ctp-blue: #1e66f5;
+  --ctp-green: #40a02b;
+  --ctp-peach: #fe640b;
+  --ctp-pink: #ea76cb;
+  --ctp-yellow: #df8e1d;
+  --ctp-red: #d20f39;
+  --ctp-on-accent: #eff1f5;
+}
+
+:root[data-theme="catppuccin-frappe"] {
+  --ctp-base: #303446;
+  --ctp-mantle: #292c3c;
+  --ctp-surface0: #414559;
+  --ctp-surface1: #51576d;
+  --ctp-subtext0: #a5adce;
+  --ctp-text: #c6d0f5;
+  --ctp-mauve: #ca9ee6;
+  --ctp-lavender: #babbf1;
+  --ctp-blue: #8caaee;
+  --ctp-green: #a6d189;
+  --ctp-peach: #ef9f76;
+  --ctp-pink: #f4b8e4;
+  --ctp-yellow: #e5c890;
+  --ctp-red: #e78284;
+  --ctp-on-accent: #232634;
+}
+
+:root[data-theme="catppuccin-macchiato"] {
+  --ctp-base: #24273a;
+  --ctp-mantle: #1e2030;
+  --ctp-surface0: #363a4f;
+  --ctp-surface1: #494d64;
+  --ctp-subtext0: #a5adcb;
+  --ctp-text: #cad3f5;
+  --ctp-mauve: #c6a0f6;
+  --ctp-lavender: #b7bdf8;
+  --ctp-blue: #8aadf4;
+  --ctp-green: #a6da95;
+  --ctp-peach: #f5a97f;
+  --ctp-pink: #f5bde6;
+  --ctp-yellow: #eed49f;
+  --ctp-red: #ed8796;
+  --ctp-on-accent: #181926;
+}
+
+:root[data-theme="catppuccin-mocha"] {
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-surface0: #313244;
+  --ctp-surface1: #45475a;
+  --ctp-subtext0: #a6adc8;
+  --ctp-text: #cdd6f4;
+  --ctp-mauve: #cba6f7;
+  --ctp-lavender: #b4befe;
+  --ctp-blue: #89b4fa;
+  --ctp-green: #a6e3a1;
+  --ctp-peach: #fab387;
+  --ctp-pink: #f5c2e7;
+  --ctp-yellow: #f9e2af;
+  --ctp-red: #f38ba8;
+  --ctp-on-accent: #11111b;
+}
+
+:root[data-theme^="catppuccin-"] {
+  --background: var(--ctp-base);
+  --foreground: var(--ctp-text);
+  --card: var(--ctp-mantle);
+  --card-foreground: var(--ctp-text);
+  --popover: var(--ctp-mantle);
+  --popover-foreground: var(--ctp-text);
+  --primary: var(--ctp-mauve);
+  --primary-foreground: var(--ctp-on-accent);
+  --secondary: var(--ctp-surface0);
+  --secondary-foreground: var(--ctp-text);
+  --muted: var(--ctp-surface0);
+  --muted-foreground: var(--ctp-subtext0);
+  --accent: var(--ctp-surface0);
+  --accent-foreground: var(--ctp-text);
+  --destructive: var(--ctp-red);
+  --border: var(--ctp-surface0);
+  --input: var(--ctp-surface1);
+  --ring: var(--ctp-lavender);
+  --chart-1: var(--ctp-mauve);
+  --chart-2: var(--ctp-blue);
+  --chart-3: var(--ctp-green);
+  --chart-4: var(--ctp-peach);
+  --chart-5: var(--ctp-pink);
+  --sidebar: var(--ctp-mantle);
+  --sidebar-foreground: var(--ctp-text);
+  --sidebar-primary: var(--ctp-mauve);
+  --sidebar-primary-foreground: var(--ctp-on-accent);
+  --sidebar-accent: var(--ctp-surface0);
+  --sidebar-accent-foreground: var(--ctp-text);
+  --sidebar-border: var(--ctp-surface0);
+  --sidebar-ring: var(--ctp-lavender);
+  --highlight: var(--ctp-yellow);
+}
+
+/* Gradient themes, in the style of Discord's: the gradient is painted once
+   on the body (--app-backdrop) and the surfaces on top are translucent tints
+   of one hue, so it shows through the sidebar, tabs and editor. Menus and
+   popovers stay solid to remain readable. */
+:root[data-theme="twilight"] {
+  --hue: 288;
+  --app-backdrop: linear-gradient(
+    120deg,
+    oklch(0.24 0.07 270),
+    oklch(0.31 0.09 290) 50%,
+    oklch(0.38 0.11 318)
+  );
+}
+
+:root[data-theme="midnight"] {
+  --hue: 266;
+  --app-backdrop: linear-gradient(
+    120deg,
+    oklch(0.15 0.04 252),
+    oklch(0.22 0.07 264) 55%,
+    oklch(0.3 0.11 276)
+  );
+}
+
+:root[data-theme="twilight"],
+:root[data-theme="midnight"] {
+  --background: oklch(0.14 0.04 var(--hue) / 0.3);
+  --foreground: oklch(0.96 0.01 var(--hue));
+  --card: oklch(0.24 0.05 var(--hue));
+  --card-foreground: oklch(0.96 0.01 var(--hue));
+  --popover: oklch(0.22 0.05 var(--hue));
+  --popover-foreground: oklch(0.96 0.01 var(--hue));
+  --primary: oklch(0.7 0.15 var(--hue));
+  --primary-foreground: oklch(0.16 0.04 var(--hue));
+  --secondary: oklch(1 0 0 / 10%);
+  --secondary-foreground: oklch(0.96 0.01 var(--hue));
+  --muted: oklch(1 0 0 / 8%);
+  --muted-foreground: oklch(0.78 0.04 var(--hue));
+  --accent: oklch(1 0 0 / 12%);
+  --accent-foreground: oklch(0.96 0.01 var(--hue));
+  --destructive: oklch(0.7 0.19 20);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.7 0.15 var(--hue));
+  --chart-1: oklch(0.7 0.15 var(--hue));
+  --chart-2: oklch(0.7 0.15 200);
+  --chart-3: oklch(0.78 0.15 150);
+  --chart-4: oklch(0.8 0.14 80);
+  --chart-5: oklch(0.7 0.18 350);
+  --sidebar: oklch(0.1 0.04 var(--hue) / 0.35);
+  --sidebar-foreground: oklch(0.96 0.01 var(--hue));
+  --sidebar-primary: oklch(0.7 0.15 var(--hue));
+  --sidebar-primary-foreground: oklch(0.16 0.04 var(--hue));
+  --sidebar-accent: oklch(1 0 0 / 10%);
+  --sidebar-accent-foreground: oklch(0.96 0.01 var(--hue));
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.7 0.15 var(--hue));
+}
+
 /* The viewport minus the desktop title bar: what full-height screens fill. */
 @utility h-app {
   height: calc(100svh - var(--titlebar-height));
@@ -131,6 +300,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Only the gradient themes set it; the rest keep the flat background. */
+    background-image: var(--app-backdrop, none);
+    background-attachment: fixed;
   }
 
   /* Room taken by the desktop title bar (WindowTitlebar); zero on the web

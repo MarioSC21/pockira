@@ -7,17 +7,32 @@
     <meta name="description" content="Pockira: tus notas, a mano." />
     <title>Pockira</title>
     <script>
-      // Applied before React mounts so a stored/preferred dark theme paints
-      // immediately instead of flashing the light theme for one frame.
+      // Applied before React mounts so the stored theme paints immediately
+      // instead of flashing the light one for a frame. Mirrors THEMES in
+      // src/shared/lib/theme.ts: [isDark, background] per theme id.
       try {
-        var storedTheme = localStorage.getItem("pockira:theme")
-        var prefersDark =
-          storedTheme === "dark" ||
-          (!storedTheme &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches)
-        if (prefersDark) {
-          document.documentElement.classList.add("dark")
+        var themes = {
+          light: [false, "oklch(1 0 0)"],
+          dark: [true, "oklch(0.145 0 0)"],
+          "catppuccin-latte": [false, "#eff1f5"],
+          "catppuccin-frappe": [true, "#303446"],
+          "catppuccin-macchiato": [true, "#24273a"],
+          "catppuccin-mocha": [true, "#1e1e2e"],
+          twilight: [true, "oklch(0.24 0.07 270)"],
+          midnight: [true, "oklch(0.18 0.05 262)"],
         }
+        var storedTheme = localStorage.getItem("pockira:theme")
+        var themeId = themes[storedTheme]
+          ? storedTheme
+          : window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+        var root = document.documentElement
+        root.dataset.theme = themeId
+        if (themes[themeId][0]) {
+          root.classList.add("dark")
+        }
+        root.style.setProperty("--boot-background", themes[themeId][1])
       } catch (e) {}
     </script>
   </head>
@@ -31,9 +46,8 @@
       </div>
     </div>
     <style>
-      html.dark,
-      html.dark body {
-        background: oklch(0.145 0 0);
+      html {
+        background: var(--boot-background, transparent);
       }
       .boot-splash {
         display: flex;

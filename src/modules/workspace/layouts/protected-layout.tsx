@@ -2,6 +2,7 @@ import { Link, Outlet } from "@tanstack/react-router"
 import { FileText, TimerIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { ThemeMenu } from "@/modules/workspace/components/theme-menu"
 import {
   Sidebar,
   SidebarContent,
@@ -73,7 +74,10 @@ export function ProtectedLayout({ footer }: ProtectedLayoutProps) {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        {footer ? <SidebarFooter>{footer}</SidebarFooter> : null}
+        <SidebarFooter>
+          <ThemeMenu />
+          {footer}
+        </SidebarFooter>
       </Sidebar>
       {/* min-w-0: the inset is a flex item next to the sidebar and defaults to
           min-width:auto, so its content width pushed the page wider than the
