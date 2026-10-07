@@ -8,6 +8,7 @@ import {
 import type { Value } from "platejs"
 import { Plate, usePlateEditor } from "platejs/react"
 import { useState } from "react"
+import type { ReactNode } from "react"
 
 import { DeleteNoteDialog } from "@/modules/notes/components/delete-note-dialog"
 import { NoteTabsBar } from "@/modules/notes/components/note-tabs-bar"
@@ -48,7 +49,14 @@ interface NoteEditorPanelProps {
   onSelectTab: (id: string) => void
   onCloseTab: (id: string) => void
   onDeleteNote: (id: string) => void
-  onToggleList: () => void
+  /** Mobile only: switches back to the list. Desktop has no list column. */
+  onToggleList?: () => void
+  /** Pinned before the tabs (the desktop notes picker). */
+  tabsLeading?: ReactNode
+  /** Right after the last tab (the desktop new-note button). */
+  tabsTrailing?: ReactNode
+  /** Shown instead of the editor when no note is open. */
+  emptyState?: ReactNode
   saveStatus: NotesSaveStatus | null
 }
 
@@ -61,6 +69,9 @@ export function NoteEditorPanel({
   onCloseTab,
   onDeleteNote,
   onToggleList,
+  tabsLeading,
+  tabsTrailing,
+  emptyState,
   saveStatus,
 }: NoteEditorPanelProps) {
   const [isShareOpen, setIsShareOpen] = useState(false)
@@ -73,79 +84,62 @@ export function NoteEditorPanel({
         activeNoteId={note?.id}
         notes={openNotes}
         onCloseTab={onCloseTab}
+        leading={tabsLeading}
         onSelectTab={onSelectTab}
+        trailing={tabsTrailing}
       />
-      <header className="flex items-center justify-between gap-4 p-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <Button onClick={onToggleList} size="icon-sm" variant="ghost">
-            <PanelLeftIcon />
-          </Button>
-          {note && (
-            <div className="min-w-0">
-              <input
-                className="w-full bg-transparent text-xl font-semibold outline-none"
-                onChange={(event) =>
-                  onUpdateNote(note.id, { title: event.target.value })
-                }
-                placeholder="Título"
-                value={note.title}
-              />
-              {noteTags(note).length > 0 && (
-                <p className="text-muted-foreground truncate text-xs">
-                  {noteTags(note)
-                    .map((tag) => tag.label)
-                    .join(" · ")}
-                </p>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {saveStatus && (
-            <span
-              className={
-                saveStatus === "error"
-                  ? "text-destructive text-xs"
-                  : "text-muted-foreground text-xs"
-              }
-            >
-              {SAVE_STATUS_LABEL[saveStatus]}
-            </span>
-          )}
-          {note && (canCollaborate || note.isOwner) && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={<Button size="icon" variant="ghost" />}
+      {(note || onToggleList) && (
+        <header className="flex items-center justify-between gap-4 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            {onToggleList && (
+              <Button
+                aria-label="Ver lista de notas"
+                onClick={onToggleList}
+                size="icon-sm"
+                variant="ghost"
               >
-                <MoreHorizontalIcon />
-              </DropdownMenuTrigger>
-              {/* w-auto: the base class sizes the menu to w-(--anchor-width),
+                <PanelLeftIcon />
+              </Button>
+            )}
+            {note && <NoteTitleField note={note} onUpdateNote={onUpdateNote} />}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {saveStatus && <SaveStatusLabel status={saveStatus} />}
+            {note && (canCollaborate || note.isOwner) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button size="icon" variant="ghost" />}
+                >
+                  <MoreHorizontalIcon />
+                </DropdownMenuTrigger>
+                {/* w-auto: the base class sizes the menu to w-(--anchor-width),
                   which here is a 32px icon button, so it fell back to min-w-32
                   and wrapped every label onto two lines. */}
-              <DropdownMenuContent className="w-auto">
-                {canCollaborate && note.isOwner && (
-                  <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
-                    <Share2Icon /> Compartir nota
-                  </DropdownMenuItem>
-                )}
-                {canCollaborate && (
-                  <DropdownMenuItem onClick={() => setIsReminderOpen(true)}>
-                    <BellIcon /> Recordatorio
-                  </DropdownMenuItem>
-                )}
-                {note.isOwner && (
-                  <DropdownMenuItem
-                    onClick={() => setIsDeleteOpen(true)}
-                    variant="destructive"
-                  >
-                    <Trash2Icon /> Eliminar nota
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </header>
+                <DropdownMenuContent className="w-auto">
+                  {canCollaborate && note.isOwner && (
+                    <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
+                      <Share2Icon /> Compartir nota
+                    </DropdownMenuItem>
+                  )}
+                  {canCollaborate && (
+                    <DropdownMenuItem onClick={() => setIsReminderOpen(true)}>
+                      <BellIcon /> Recordatorio
+                    </DropdownMenuItem>
+                  )}
+                  {note.isOwner && (
+                    <DropdownMenuItem
+                      onClick={() => setIsDeleteOpen(true)}
+                      variant="destructive"
+                    >
+                      <Trash2Icon /> Eliminar nota
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </header>
+      )}
       {note && canCollaborate && (
         <>
           <ShareNoteDialog
@@ -170,11 +164,58 @@ export function NoteEditorPanel({
       {note ? (
         <NoteEditorBody key={note.id} note={note} onUpdateNote={onUpdateNote} />
       ) : (
-        <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
-          Selecciona o crea una nota
-        </div>
+        (emptyState ?? (
+          <div className="text-muted-foreground flex flex-1 items-center justify-center text-sm">
+            Selecciona o crea una nota
+          </div>
+        ))
       )}
     </div>
+  )
+}
+
+function NoteTitleField({
+  note,
+  onUpdateNote,
+}: {
+  note: WorkspaceNote
+  onUpdateNote: (
+    id: string,
+    patch: Partial<Pick<WorkspaceNote, "title" | "body">>
+  ) => void
+}) {
+  const tags = noteTags(note)
+
+  return (
+    <div className="min-w-0">
+      <input
+        className="w-full bg-transparent text-xl font-semibold outline-none"
+        onChange={(event) =>
+          onUpdateNote(note.id, { title: event.target.value })
+        }
+        placeholder="Título"
+        value={note.title}
+      />
+      {tags.length > 0 && (
+        <p className="text-muted-foreground truncate text-xs">
+          {tags.map((tag) => tag.label).join(" · ")}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function SaveStatusLabel({ status }: { status: NotesSaveStatus }) {
+  return (
+    <span
+      className={
+        status === "error"
+          ? "text-destructive text-xs"
+          : "text-muted-foreground text-xs"
+      }
+    >
+      {SAVE_STATUS_LABEL[status]}
+    </span>
   )
 }
 

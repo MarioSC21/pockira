@@ -1,4 +1,4 @@
-import { format } from "date-fns"
+import { format, isToday, isYesterday } from "date-fns"
 import { es } from "date-fns/locale"
 import type { Value } from "platejs"
 
@@ -30,6 +30,15 @@ export function formatNoteDate(date: Date) {
 
 export function formatNoteTime(date: Date) {
   return format(date, "h:mmaaa")
+}
+
+/** Compact date for dense lists: the time for today, "ayer", else the day. */
+export function formatNoteShortDate(date: Date) {
+  if (isToday(date)) {
+    return formatNoteTime(date)
+  }
+
+  return isYesterday(date) ? "ayer" : formatNoteDate(date)
 }
 
 /** Badges shown on the list card and in the editor header. */

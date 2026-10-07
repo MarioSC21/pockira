@@ -310,7 +310,7 @@ function DesktopTitlebar() {
               <DropdownMenuSubTrigger>Ver</DropdownMenuSubTrigger>
               <DropdownMenuSubContent className="min-w-56">
                 <DropdownMenuItem onClick={handleToggleNotesList}>
-                  Mostrar u ocultar lista
+                  Ver lista de notas
                   <DropdownMenuShortcut>Ctrl+\</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
