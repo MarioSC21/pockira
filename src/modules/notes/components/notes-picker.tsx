@@ -137,7 +137,20 @@ export function NotesPicker({
         <Tooltip>
           <TooltipTrigger
             render={
-              <PopoverTrigger render={<Button size="sm" variant="outline" />} />
+              <PopoverTrigger
+                render={
+                  // Styled as an inactive tab so it blends into the tab strip.
+                  <Button
+                    className={cn(
+                      "h-8 rounded-t-lg rounded-b-none px-3 font-normal",
+                      open
+                        ? "bg-background text-foreground hover:bg-background"
+                        : "text-muted-foreground hover:bg-background/60 hover:text-foreground"
+                    )}
+                    variant="ghost"
+                  />
+                }
+              />
             }
           >
             <NotebookTextIcon />

@@ -31,7 +31,12 @@ export function NoteTabsBar({
   return (
     <div className="bg-muted/30 flex shrink-0 items-end">
       {leading ? (
-        <div className="flex h-10 shrink-0 items-center pl-2">{leading}</div>
+        // Bottom-aligned like the tabs, with a divider so it reads as part of
+        // the strip instead of a floating pill.
+        <div className="flex h-10 shrink-0 items-end gap-2 pt-2 pl-2">
+          {leading}
+          <span aria-hidden className="bg-border mb-2 h-4 w-px" />
+        </div>
       ) : null}
       <ScrollArea
         className="min-w-0 flex-1"
