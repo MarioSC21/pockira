@@ -1,5 +1,7 @@
 # Builds the web app and publishes it to Cloudflare Pages
-# (project "pockira-app", https://pockira-app.pages.dev) on every push to main.
+# (project "pockira-app", https://pockira-app.pages.dev) when a release tag is
+# pushed, so the web ships the same fixes as the desktop/Android release
+# (release.yml). Pushes to main alone do not deploy.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
@@ -9,14 +11,8 @@ name: Deploy web app
 
 on:
   push:
-    branches:
-      - main
-    paths-ignore:
-      - "docs/**"
-      - "website/**"
-      - "migrations/**"
-      - "src-tauri/**"
-      - "**/*.md"
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:

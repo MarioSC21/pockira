@@ -5,7 +5,8 @@
 #   1. Bump "version" in src-tauri/tauri.conf.json (e.g. 0.2.0).
 #   2. git tag v0.2.0 && git push origin v0.2.0
 #   3. The release is published as soon as every build finishes; installed
-#      apps pick it up through latest.json on their next update check.
+#      apps pick it up through latest.json on their next update check. The
+#      same tag also deploys the web app (deploy-web.yml).
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
