@@ -16,7 +16,10 @@ import { ReminderDialog } from "@/modules/notes/components/reminder-dialog"
 import { ShareNoteDialog } from "@/modules/notes/components/share-note-dialog"
 import { noteEditorKit } from "@/modules/notes/lib/note-editor-kit"
 import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
-import { noteTags } from "@/modules/notes/lib/workspace-note"
+import {
+  formatNoteDateTime,
+  noteTags,
+} from "@/modules/notes/lib/workspace-note"
 import type { NotesSaveStatus } from "@/modules/notes/types/notes-workspace"
 import {
   Editor,
@@ -26,7 +29,10 @@ import { Button } from "@/shared/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
@@ -120,6 +126,14 @@ export function NoteEditorPanel({
                   which here is a 32px icon button, so it fell back to min-w-32
                   and wrapped every label onto two lines. */}
                 <DropdownMenuContent className="w-auto">
+                  {/* The header shows when the note was created; the last
+                    edit is tucked away here. */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>
+                      Modificada el {formatNoteDateTime(note.updatedAt)}
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
                   {canCollaborate && note.isOwner && (
                     <DropdownMenuItem
                       disabled={isOffline}

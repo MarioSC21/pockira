@@ -155,14 +155,16 @@ export function useDeviceNotesWorkspace({
   }
 
   const createNote = () => {
+    const now = new Date()
     const newNote: WorkspaceNote = {
       body: emptyNoteBody(),
-      createdAt: new Date(),
+      createdAt: now,
       id: crypto.randomUUID(),
       isOwner: true,
       pinned: false,
       shared: false,
       title: "",
+      updatedAt: now,
     }
     setNotes((prev) => [newNote, ...prev])
     selectNote(newNote.id)
@@ -171,7 +173,9 @@ export function useDeviceNotesWorkspace({
 
   const updateNote = (id: string, patch: WorkspaceNotePatch) => {
     setNotes((prev) =>
-      prev.map((note) => (note.id === id ? { ...note, ...patch } : note))
+      prev.map((note) =>
+        note.id === id ? { ...note, ...patch, updatedAt: new Date() } : note
+      )
     )
   }
 

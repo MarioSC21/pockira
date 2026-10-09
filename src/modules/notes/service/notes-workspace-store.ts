@@ -21,9 +21,11 @@ export interface DeviceNotesWorkspace {
   selectedNoteId: string | undefined
 }
 
-/** JSON has no Date, so `createdAt` travels as an ISO string. */
-export type StoredNote = Omit<WorkspaceNote, "createdAt"> & {
+/** JSON has no Date, so the dates travel as ISO strings. Notes stored before
+    `updatedAt` existed lack it. */
+export type StoredNote = Omit<WorkspaceNote, "createdAt" | "updatedAt"> & {
   createdAt: string
+  updatedAt?: string
 }
 
 interface StoredWorkspace {
@@ -34,16 +36,26 @@ interface StoredWorkspace {
 }
 
 export function toStoredNote(note: WorkspaceNote): StoredNote {
-  return { ...note, createdAt: note.createdAt.toISOString() }
+  return {
+    ...note,
+    createdAt: note.createdAt.toISOString(),
+    updatedAt: note.updatedAt.toISOString(),
+  }
+}
+
+function parseDate(value: string | undefined, fallback: Date) {
+  const date = new Date(value ?? Number.NaN)
+  return Number.isNaN(date.getTime()) ? fallback : date
 }
 
 export function fromStoredNote(note: StoredNote): WorkspaceNote {
-  const createdAt = new Date(note.createdAt)
+  const createdAt = parseDate(note.createdAt, new Date())
 
   return {
     ...note,
-    createdAt: Number.isNaN(createdAt.getTime()) ? new Date() : createdAt,
+    createdAt,
     isOwner: true,
+    updatedAt: parseDate(note.updatedAt, createdAt),
   }
 }
 

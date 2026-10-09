@@ -144,14 +144,15 @@ function toWorkspaceNote(
 ): WorkspaceNote {
   return {
     body: draft?.body ?? toEditorValue(note.content),
-    // The backend filters days by last modification (list_notes), so the
-    // card shows that same date to stay consistent with the calendar.
-    createdAt: new Date(note.updated_at),
+    // list_notes files notes under the day they were created, the same date
+    // the card shows.
+    createdAt: new Date(note.created_at),
     id: note.id,
     isOwner: note.is_owner ?? true,
     pinned,
     shared: note.is_shared ?? false,
     title: draft?.title ?? note.title,
+    updatedAt: new Date(note.updated_at),
   }
 }
 
@@ -635,7 +636,7 @@ export function useAccountNotesWorkspace(
       .map(toView),
   ]
   // oxlint-disable-next-line unicorn/no-array-sort -- sorts the fresh array built above; toSorted is not in the ES2022 lib this project targets
-  deviceCopyNotes.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+  deviceCopyNotes.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
 
   const listedNotes = isUsingDeviceCopy
     ? filterNotes(deviceCopyNotes, filter, search)
@@ -692,15 +693,17 @@ export function useAccountNotesWorkspace(
   }
 
   const createNote = () => {
+    const now = new Date()
     const created: WorkspaceNote = {
       body: emptyNoteBody(),
-      createdAt: new Date(),
+      createdAt: now,
       // Picked here so the open tab keeps its id once the row is inserted.
       id: crypto.randomUUID(),
       isOwner: true,
       pinned: false,
       shared: false,
       title: "",
+      updatedAt: now,
     }
     updateLocalNotes((prev) => ({ ...prev, [created.id]: created }))
     selectNote(created.id)

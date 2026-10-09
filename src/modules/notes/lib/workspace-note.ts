@@ -14,8 +14,11 @@ export interface WorkspaceNote {
   title: string
   body: Value
   pinned: boolean
-  /** Day the note belongs to: what the calendar and the "Hoy" tab filter on. */
+  /** When it was created: the date it shows, and the day the calendar and
+      the "Hoy" tab file it under. */
   createdAt: Date
+  /** Last modification, shown in the note's menu. */
+  updatedAt: Date
   /** Drives the "Personales" / "Compartidas" tabs. */
   shared: boolean
   /** Only the owner may delete or share a note. */
@@ -32,6 +35,10 @@ export function formatNoteDate(date: Date) {
 
 export function formatNoteTime(date: Date) {
   return format(date, "h:mmaaa")
+}
+
+export function formatNoteDateTime(date: Date) {
+  return `${formatNoteDate(date)} · ${formatNoteTime(date)}`
 }
 
 /** Compact date for dense lists: the time for today, "ayer", else the day. */
