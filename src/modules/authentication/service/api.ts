@@ -5,6 +5,18 @@ import { insforge } from "@/shared/service/insforge-client"
 export type OAuthProvider = "google" | "github"
 
 export const auth = {
+  /** Web: the SDK sends the browser to the provider itself and returns no
+      URL, so only an error means it failed. */
+  async redirectToOAuth(provider: OAuthProvider, redirectTo: string) {
+    const { error } = await insforge.auth.signInWithOAuth(provider, {
+      redirectTo,
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+  },
+
   async loginWithOAuth(
     provider: OAuthProvider,
     options: { redirectTo: string; skipBrowserRedirect?: boolean }

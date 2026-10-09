@@ -55,9 +55,10 @@ export function useSignInWithOAuth() {
         return session.user
       }
 
-      await auth.loginWithOAuth(provider, {
-        redirectTo: `${window.location.origin}${WEB_OAUTH_REDIRECT_PATH}`,
-      })
+      await auth.redirectToOAuth(
+        provider,
+        `${window.location.origin}${WEB_OAUTH_REDIRECT_PATH}`
+      )
       return null
     },
     onSuccess: (user) => {

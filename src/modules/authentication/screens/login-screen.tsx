@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router"
+import { isTauri } from "@tauri-apps/api/core"
 import { useEffect, useRef } from "react"
 
 import { Button } from "@/shared/components/ui/button"
@@ -15,7 +16,12 @@ export function LoginScreen() {
 
   // Waiting for the browser (desktop Google sign-in) does not lock the guest
   // option: the person may have closed that tab, so it cancels the wait.
-  const isWaitingForGoogle = signInWithOAuth.isPending
+  // On the web the browser itself leaves for Google, so there is nothing to
+  // wait for or cancel: the button just stays disabled until the page goes.
+  const isDesktop = isTauri()
+  const isWaitingForGoogle = isDesktop && signInWithOAuth.isPending
+  const isRedirectingToGoogle =
+    !isDesktop && (signInWithOAuth.isPending || signInWithOAuth.isSuccess)
   const error =
     signInWithOAuth.error instanceof OAuthCancelledError
       ? null
@@ -91,7 +97,7 @@ export function LoginScreen() {
           </div>
         ) : (
           <OAuthButton
-            disabled={continueAsGuest.isPending}
+            disabled={continueAsGuest.isPending || isRedirectingToGoogle}
             onClick={handleGoogle}
             provider="google"
           />
