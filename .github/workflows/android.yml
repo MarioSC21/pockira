@@ -13,7 +13,7 @@
 # needs uninstalling the previous version first.
 #
 # Run it by hand (Actions → Release Android → Run workflow) to get the APK as a
-# workflow artifact without a release.
+# workflow artifact, or to attach it to an existing release by its tag.
 name: Release Android
 
 on:
@@ -21,6 +21,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to attach the APK to (empty = artifact only)
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -29,8 +34,6 @@ jobs:
   android:
     name: Build (Android)
     runs-on: ubuntu-latest
-    env:
-      NDK_VERSION: 27.2.12479018
 
     steps:
       - uses: actions/checkout@v5
@@ -49,12 +52,10 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install the Android NDK
-        run: |
-          sdkmanager --install "ndk;${NDK_VERSION}"
-          echo "NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+      # The runner image ships the Android SDK and NDK (ANDROID_HOME,
+      # ANDROID_NDK_LATEST_HOME); android-actions/setup-android broke on it.
+      - name: Use the preinstalled Android NDK
+        run: echo "NDK_HOME=${ANDROID_NDK_LATEST_HOME}" >> "$GITHUB_ENV"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -126,10 +127,10 @@ jobs:
       # release.yml creates the release when its desktop builds finish, so
       # this waits for it instead of racing it with a second release.
       - name: Attach the APK to the release
-        if: github.ref_type == 'tag'
+        if: github.ref_type == 'tag' || inputs.tag != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.ref_name }}
+          TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           for attempt in $(seq 1 60); do
             if gh release view "$TAG" > /dev/null 2>&1; then
