@@ -66,13 +66,18 @@ function TodoMarker(props: PlateElementProps) {
   const { checkboxProps } = useTodoListElement(state)
   const readOnly = useReadOnly()
 
+  // A box one line tall centers the checkbox on
+  // the first line of text instead of pinning it to a fixed offset.
   return (
-    <div contentEditable={false}>
+    <div
+      className="absolute top-0 -left-6 flex h-lh items-center"
+      contentEditable={false}
+    >
       <Checkbox
         className={cn(
           // cursor-pointer: the editor container sets cursor-text, which the
           // checkbox would otherwise inherit and read as non-interactive.
-          "absolute top-1 -left-6 cursor-pointer",
+          "cursor-pointer",
           readOnly && "pointer-events-none cursor-text"
         )}
         {...checkboxProps}
