@@ -499,7 +499,9 @@ function ColorDropdownMenuItem({
           size: "icon",
           variant: "outline",
         }),
-        "border-muted my-1 flex size-6 items-center justify-center rounded-full border border-solid p-0 transition-all hover:scale-125",
+        // min-h-0: the menu item's base min-h-7 would stretch the 24px swatch
+        // into an oval.
+        "border-muted my-1 flex size-6 min-h-0 shrink-0 items-center justify-center rounded-full border border-solid p-0 transition-all hover:scale-125",
         !isBrightColor && "border-transparent text-white",
         className
       )}
