@@ -26,6 +26,10 @@ import {
   useUpdateNote,
 } from "@/modules/notes/service/mutations"
 import {
+  readOpenTabs,
+  writeOpenTabs,
+} from "@/modules/notes/service/open-tabs-store"
+import {
   noteDetailQueryOptions,
   useNotesList,
 } from "@/modules/notes/service/queries"
@@ -138,12 +142,13 @@ function errorMessage(error: unknown) {
  * Signed-in mode: notes come from the backend through TanStack Query. The
  * open tabs and the pinned set are UI state; edits are kept as local drafts
  * and saved after a short pause in typing. A new note lives only here until
- * something is written in it; its first save inserts the row.
+ * something is written in it; its first save inserts the row. The open tabs
+ * are remembered on this device for `accountId`.
  */
-export function useAccountNotesWorkspace({
-  filter,
-  search,
-}: NotesWorkspaceQuery): NotesWorkspace {
+export function useAccountNotesWorkspace(
+  { filter, search }: NotesWorkspaceQuery,
+  accountId: string
+): NotesWorkspace {
   const queryClient = useQueryClient()
   const debouncedSearch = useDebouncedValue(search.trim(), SEARCH_DEBOUNCE_MS)
   const list = useNotesList(toListParams(filter, debouncedSearch))
@@ -153,8 +158,12 @@ export function useAccountNotesWorkspace({
   const deleteMutation = useDeleteNote()
   const claimInvitations = useClaimNoteInvitations()
 
-  const [openNoteIds, setOpenNoteIds] = useState<string[]>([])
-  const [selectedNoteId, setSelectedNoteId] = useState<string>()
+  const [openNoteIds, setOpenNoteIds] = useState(
+    () => readOpenTabs(accountId).openNoteIds
+  )
+  const [selectedNoteId, setSelectedNoteId] = useState(
+    () => readOpenTabs(accountId).selectedNoteId
+  )
   const [pinnedIds, setPinnedIds] = useState<string[]>([])
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
   // Notes opened with "new note" that have no row yet.
@@ -199,20 +208,41 @@ export function useAccountNotesWorkspace({
     claim()
   }, [claim])
 
+  // New notes without a row are not fetched.
+  const fetchedIds = openNoteIds.filter((id) => !(id in localNotes))
   const openQueries = useQueries({
-    queries: openNoteIds
-      .filter((id) => !(id in localNotes))
-      .map((id) => ({
-        ...noteDetailQueryOptions(id),
-        initialData: () =>
-          findListedNote(
-            queryClient.getQueriesData<InfiniteData<ListNotesResult>>({
-              queryKey: noteKeys.lists(),
-            }),
-            id
-          ),
-      })),
+    queries: fetchedIds.map((id) => ({
+      ...noteDetailQueryOptions(id),
+      initialData: () =>
+        findListedNote(
+          queryClient.getQueriesData<InfiniteData<ListNotesResult>>({
+            queryKey: noteKeys.lists(),
+          }),
+          id
+        ),
+    })),
   })
+
+  // A remembered tab whose note was deleted or unshared elsewhere cannot be
+  // fetched any more; it is hidden and forgotten instead of lingering empty.
+  const missingIds = new Set(
+    fetchedIds.filter((_, index) => openQueries[index]?.isError)
+  )
+  const keptIds = openNoteIds.filter(
+    (id) => !(id in localNotes) && !missingIds.has(id)
+  )
+
+  // Notes without a row yet are left out: they would not exist next time.
+  const persistedTabsKey = JSON.stringify({
+    openNoteIds: keptIds,
+    selectedNoteId:
+      selectedNoteId && keptIds.includes(selectedNoteId)
+        ? selectedNoteId
+        : keptIds[0],
+  })
+  useEffect(() => {
+    writeOpenTabs(accountId, JSON.parse(persistedTabsKey))
+  }, [accountId, persistedTabsKey])
 
   const { mutate: saveNote } = updateMutation
   const { mutate: insertNote } = createMutation
@@ -475,7 +505,11 @@ export function useAccountNotesWorkspace({
     openNotes,
     saveStatus: getSaveStatus(),
     selectNote,
-    selectedNote: openNotes.find((note) => note.id === selectedNoteId),
+    selectedNote:
+      openNotes.find((note) => note.id === selectedNoteId) ??
+      (selectedNoteId && missingIds.has(selectedNoteId)
+        ? openNotes[0]
+        : undefined),
     togglePin,
     updateNote,
   }

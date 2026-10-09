@@ -11,8 +11,16 @@ function NotesRoute() {
   const { data: session } = useSession()
 
   // Signed-in notes live in the backend; a guest's stay on this device. The
-  // key remounts the screen so the two never share in-memory state.
-  const source = session?.user ? "account" : "device"
+  // key remounts the screen so two sources or accounts never share in-memory
+  // state.
+  const accountId = session?.user?.id
+  const source = accountId ? "account" : "device"
 
-  return <NotesScreen key={source} source={source} />
+  return (
+    <NotesScreen
+      accountId={accountId}
+      key={accountId ?? source}
+      source={source}
+    />
+  )
 }

@@ -23,10 +23,16 @@ export type NotesSource = "account" | "device"
 
 interface NotesScreenProps {
   source: NotesSource
+  /** The signed-in account; required for the "account" source. */
+  accountId?: string
 }
 
-export function NotesScreen({ source }: NotesScreenProps) {
-  return source === "account" ? <AccountNotesScreen /> : <DeviceNotesScreen />
+export function NotesScreen({ source, accountId }: NotesScreenProps) {
+  return source === "account" && accountId ? (
+    <AccountNotesScreen accountId={accountId} />
+  ) : (
+    <DeviceNotesScreen />
+  )
 }
 
 function useNotesListControls() {
@@ -46,9 +52,9 @@ function useNotesListControls() {
 
 type NotesListControls = ReturnType<typeof useNotesListControls>
 
-function AccountNotesScreen() {
+function AccountNotesScreen({ accountId }: { accountId: string }) {
   const controls = useNotesListControls()
-  const workspace = useAccountNotesWorkspace(controls)
+  const workspace = useAccountNotesWorkspace(controls, accountId)
   useReminderNotifications()
 
   return (
