@@ -98,6 +98,41 @@ export const insertBlock = (
 
       return
     }
+    // The line is a void block: it replaces an empty current block and a
+    // paragraph follows it, where the caret goes to keep writing.
+    if (type === KEYS.hr) {
+      const hrPath = isCurrentBlockEmpty ? path : PathApi.next(path)
+
+      if (isCurrentBlockEmpty) {
+        editor.tf.removeNodes({ at: path })
+      }
+
+      editor.tf.insertNodes(
+        [
+          { children: [{ text: "" }], type: KEYS.hr },
+          editor.api.create.block(),
+        ],
+        { at: hrPath }
+      )
+
+      const start = editor.api.start(PathApi.next(hrPath))
+      if (start) {
+        editor.tf.focus({ at: start })
+
+        // Picking the item with the mouse refocuses the editor once the click
+        // ends, which puts the caret back above the line; select it again
+        // after that, wherever the paragraph has moved by then.
+        const startRef = editor.api.pointRef(start)
+        setTimeout(() => {
+          const point = startRef.unref()
+          if (point) {
+            editor.tf.select(point)
+          }
+        }, 0)
+      }
+
+      return
+    }
     if (type in insertBlockMap) {
       insertBlockMap[type](editor, type)
     } else {

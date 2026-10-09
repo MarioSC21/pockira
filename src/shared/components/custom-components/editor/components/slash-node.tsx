@@ -9,6 +9,7 @@ import {
   ListOrdered,
   PilcrowIcon,
   Quote,
+  SeparatorHorizontalIcon,
   Square,
   Table,
 } from "lucide-react"
@@ -98,6 +99,12 @@ const groups: Group[] = [
         keywords: ["```", "codigo"],
         label: "Código",
         value: KEYS.codeBlock,
+      },
+      {
+        icon: <SeparatorHorizontalIcon />,
+        keywords: ["divider", "hr", "linea", "separador", "---"],
+        label: "Separador",
+        value: KEYS.hr,
       },
       {
         icon: <Table />,
