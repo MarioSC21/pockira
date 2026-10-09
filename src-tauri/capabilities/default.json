@@ -21,7 +21,6 @@
     "core:webview:allow-set-webview-zoom",
     "notification:default",
     "store:default",
-    "updater:default",
     "process:allow-restart"
   ]
 }

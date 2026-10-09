@@ -6,7 +6,8 @@
 #   2. git tag v0.2.0 && git push origin v0.2.0
 #   3. The release is published as soon as every build finishes; installed
 #      apps pick it up through latest.json on their next update check. The
-#      same tag also deploys the web app (deploy-web.yml).
+#      same tag also deploys the web app (deploy-web.yml) and builds the
+#      Android APK (android.yml), which is attached to this same release.
 #
 # Required repository secrets (Settings → Secrets and variables → Actions):
 #   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
@@ -93,6 +94,7 @@ jobs:
             - **Windows:** `Pockira_*_x64-setup.exe` (o el `.msi`)
             - **macOS:** `Pockira_*_aarch64.dmg` (Apple Silicon) o `Pockira_*_x64.dmg` (Intel)
             - **Linux:** `.AppImage` o `.deb`
+            - **Android:** `Pockira_*_android-arm64.apk` (lo agrega android.yml unos minutos después)
 
             > Windows puede mostrar "Windows protegió tu PC": pulsa **Más información → Ejecutar de todas formas**.
             > En macOS, la primera vez abre la app con **clic derecho → Abrir**.

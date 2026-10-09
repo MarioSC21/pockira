@@ -1,0 +1,142 @@
+# Builds the Android app (arm64 APK) and attaches it to the GitHub Release of
+# the same tag that release.yml creates for the desktop installers.
+#
+# The Android project (src-tauri/gen/android) is generated here with
+# `tauri android init` instead of being committed.
+#
+# Signing: the APK is signed with the keystore in these repository secrets so
+# each version installs over the previous one:
+#   ANDROID_KEYSTORE_BASE64 — the .jks file, base64-encoded.
+#   ANDROID_KEYSTORE_PASSWORD — its password (also used for the key).
+#   ANDROID_KEY_ALIAS — the key's alias.
+# Without them a throwaway key is generated: the APK installs, but updating it
+# needs uninstalling the previous version first.
+#
+# Run it by hand (Actions → Release Android → Run workflow) to get the APK as a
+# workflow artifact without a release.
+name: Release Android
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: Build (Android)
+    runs-on: ubuntu-latest
+    env:
+      NDK_VERSION: 27.2.12479018
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install the Android NDK
+        run: |
+          sdkmanager --install "ndk;${NDK_VERSION}"
+          echo "NDK_HOME=${ANDROID_HOME}/ndk/${NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate the Android project
+        run: pnpm tauri android init --ci
+
+      - name: Build the APK
+        env:
+          VITE_INSFORGE_URL: ${{ secrets.VITE_INSFORGE_URL }}
+          VITE_INSFORGE_ANON_KEY: ${{ secrets.VITE_INSFORGE_ANON_KEY }}
+        run: pnpm tauri android build --apk --target aarch64 --ci
+
+      - name: Sign the APK
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          else
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret: signing with a throwaway key."
+            KEYSTORE_PASSWORD="throwaway"
+            KEY_ALIAS="pockira"
+            keytool -genkeypair -v -keystore "$RUNNER_TEMP/release.jks" \
+              -alias "$KEY_ALIAS" -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass "$KEYSTORE_PASSWORD" -keypass "$KEYSTORE_PASSWORD" \
+              -dname "CN=Pockira"
+          fi
+
+          unsigned=$(find src-tauri/gen/android/app/build/outputs/apk -name "*-unsigned.apk" | head -n 1)
+          if [ -z "$unsigned" ]; then
+            echo "::error::No unsigned APK was produced."
+            exit 1
+          fi
+
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          build_tools=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          output="Pockira_${version}_android-arm64.apk"
+
+          "$build_tools/zipalign" -f -p 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" sign \
+            --ks "$RUNNER_TEMP/release.jks" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass "pass:$KEYSTORE_PASSWORD" \
+            --key-pass "pass:$KEYSTORE_PASSWORD" \
+            --out "$output" \
+            "$RUNNER_TEMP/aligned.apk"
+          "$build_tools/apksigner" verify "$output"
+
+          echo "APK_PATH=$output" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: ${{ env.APK_PATH }}
+
+      # release.yml creates the release when its desktop builds finish, so
+      # this waits for it instead of racing it with a second release.
+      - name: Attach the APK to the release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          for attempt in $(seq 1 60); do
+            if gh release view "$TAG" > /dev/null 2>&1; then
+              gh release upload "$TAG" "$APK_PATH" --clobber
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::Release $TAG was not created within 30 minutes; the APK is in the workflow artifacts."
+          exit 1
