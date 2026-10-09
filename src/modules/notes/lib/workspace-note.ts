@@ -20,6 +20,8 @@ export interface WorkspaceNote {
   shared: boolean
   /** Only the owner may delete or share a note. */
   isOwner: boolean
+  /** Set when the owner cannot delete it right now (e.g. offline). */
+  deleteDisabledReason?: string
 }
 
 export type WorkspaceNotePatch = Partial<Pick<WorkspaceNote, "title" | "body">>

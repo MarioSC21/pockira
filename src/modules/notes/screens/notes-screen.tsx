@@ -155,6 +155,7 @@ function NotesWorkspaceView({
 
   const editorProps = {
     canCollaborate: workspace.canCollaborate,
+    isOffline: workspace.isOffline,
     note: workspace.selectedNote,
     onCloseTab: handleCloseTab,
     onDeleteNote: handleDeleteNote,

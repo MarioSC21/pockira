@@ -1,7 +1,16 @@
-import { useQueries, useQueryClient } from "@tanstack/react-query"
-import type { InfiniteData } from "@tanstack/react-query"
-import type { Value } from "platejs"
-import { useCallback, useEffect, useRef, useState } from "react"
+import {
+  onlineManager,
+  useQueries,
+  useQueryClient,
+} from "@tanstack/react-query"
+import type { InfiniteData, QueryKey } from "@tanstack/react-query"
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react"
 
 import {
   emptyNoteBody,
@@ -9,11 +18,21 @@ import {
   toEditorValue,
   toNoteContent,
 } from "@/modules/notes/lib/note-body"
+import { filterNotes } from "@/modules/notes/lib/note-filters"
 import type { NoteFilter } from "@/modules/notes/lib/note-filters"
 import type {
   WorkspaceNote,
   WorkspaceNotePatch,
 } from "@/modules/notes/lib/workspace-note"
+import {
+  isOfflineNotesAvailable,
+  loadOfflineAccountNotes,
+  saveOfflineAccountNotes,
+} from "@/modules/notes/service/account-notes-store"
+import type {
+  NoteDraft,
+  OfflineAccountNotes,
+} from "@/modules/notes/service/account-notes-store"
 import type {
   ListNotesParams,
   ListNotesResult,
@@ -42,6 +61,13 @@ import type {
 
 // Typing pauses shorter than this are merged into one request.
 const SAVE_DEBOUNCE_MS = 700
+// How long the offline copy waits for changes to settle before it is written.
+const OFFLINE_SAVE_DEBOUNCE_MS = 400
+
+const DELETE_NEEDS_CONNECTION = "Necesitas conexión para eliminar esta nota"
+
+// Only desktop and Android keep a device copy; the web needs the backend.
+const OFFLINE_NOTES_ENABLED = isOfflineNotesAvailable()
 const SEARCH_DEBOUNCE_MS = 300
 
 const TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -103,7 +129,7 @@ function findListedNote(
   }
 }
 
-type Draft = Partial<{ title: string; body: Value }>
+type Draft = NoteDraft
 
 function withoutKey<T>(record: Record<string, T>, key: string) {
   return Object.fromEntries(
@@ -134,6 +160,74 @@ function isBlank(note: Pick<WorkspaceNote, "title" | "body">) {
   return note.title.trim() === "" && extractText(note.body) === ""
 }
 
+/** Rows held by the cached note queries: list pages or a single note. */
+function notesInQuery(queryKey: QueryKey, data: unknown): Note[] {
+  if (!data || queryKey[0] !== noteKeys.all[0]) {
+    return []
+  }
+
+  if (queryKey[1] === "list") {
+    return (data as InfiniteData<ListNotesResult>).pages.flatMap(
+      (page) => page.items
+    )
+  }
+
+  return queryKey[1] === "detail" ? [data as Note] : []
+}
+
+/** A row read without the computed flags keeps the ones already known. */
+function mergeNotes(previous: Record<string, Note>, rows: Note[]) {
+  const next = { ...previous }
+
+  for (const row of rows) {
+    next[row.id] = { ...next[row.id], ...row }
+  }
+
+  return next
+}
+
+/**
+ * What the device copy keeps to reopen and finish the work: the notes seen,
+ * the new notes with something written, and the unsaved edits.
+ */
+function toOfflineSnapshot(
+  notes: Record<string, Note>,
+  localNotes: Record<string, WorkspaceNote>,
+  drafts: Record<string, Draft>
+): OfflineAccountNotes {
+  const localNotesToKeep = Object.fromEntries(
+    Object.entries(localNotes).filter(
+      ([id, note]) => !isBlank({ ...note, ...drafts[id] })
+    )
+  )
+  const draftsToKeep = Object.fromEntries(
+    Object.entries(drafts).filter(
+      ([id]) => !(id in localNotes) || id in localNotesToKeep
+    )
+  )
+
+  return { drafts: draftsToKeep, localNotes: localNotesToKeep, notes }
+}
+
+async function writeOfflineSnapshot(
+  accountId: string,
+  snapshot: OfflineAccountNotes
+) {
+  try {
+    await saveOfflineAccountNotes(accountId, snapshot)
+  } catch {
+    // A failed write is retried with the whole copy on the next change.
+  }
+}
+
+function subscribeToNetwork(onChange: () => void) {
+  return onlineManager.subscribe(onChange)
+}
+
+function isNetworkOnline() {
+  return onlineManager.isOnline()
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : null
 }
@@ -144,6 +238,10 @@ function errorMessage(error: unknown) {
  * and saved after a short pause in typing. A new note lives only here until
  * something is written in it; its first save inserts the row. The open tabs
  * are remembered on this device for `accountId`.
+ *
+ * On desktop and Android the notes seen and the unsaved edits are also kept on
+ * the device, so without a connection the notes still open, can be written
+ * and created, and the pending edits are sent once the connection is back.
  */
 export function useAccountNotesWorkspace(
   { filter, search }: NotesWorkspaceQuery,
@@ -171,6 +269,12 @@ export function useAccountNotesWorkspace(
     {}
   )
   const [actionError, setActionError] = useState<string | null>(null)
+  // Last copy of each row seen from the backend (desktop and Android only).
+  const [cachedNotes, setCachedNotes] = useState<Record<string, Note>>({})
+  const [isRestoring, setIsRestoring] = useState(OFFLINE_NOTES_ENABLED)
+  const isOnline = useSyncExternalStore(subscribeToNetwork, isNetworkOnline)
+  // Offline, the list is built from the device copy instead of the backend.
+  const isUsingDeviceCopy = OFFLINE_NOTES_ENABLED && !isOnline
 
   // Refs are written eagerly: flushDraft runs from timers and callbacks
   // before React renders the change.
@@ -180,6 +284,11 @@ export function useAccountNotesWorkspace(
   const creatingIdsRef = useRef(new Set<string>())
   const saveTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
   const flushDraftRef = useRef<(id: string) => void>(() => null)
+  const cachedNotesRef = useRef(cachedNotes)
+
+  useEffect(() => {
+    cachedNotesRef.current = cachedNotes
+  }, [cachedNotes])
 
   const updateDrafts = useCallback(
     (update: (prev: Record<string, Draft>) => Record<string, Draft>) => {
@@ -208,10 +317,72 @@ export function useAccountNotesWorkspace(
     claim()
   }, [claim])
 
+  // Brings back the device copy and the edits that were still pending when
+  // the app closed; until then nothing is fetched or remembered, so the
+  // restored tabs are not mistaken for missing notes.
+  useEffect(() => {
+    if (!OFFLINE_NOTES_ENABLED) {
+      return
+    }
+
+    let isActive = true
+
+    const restore = async () => {
+      try {
+        const stored = await loadOfflineAccountNotes(accountId)
+        const seen = queryClient
+          .getQueriesData({ queryKey: noteKeys.all })
+          .flatMap(([queryKey, data]) => notesInQuery(queryKey, data))
+
+        if (isActive) {
+          setCachedNotes((prev) =>
+            mergeNotes({ ...stored?.notes, ...prev }, seen)
+          )
+
+          if (stored) {
+            updateLocalNotes((prev) => ({ ...stored.localNotes, ...prev }))
+            updateDrafts((prev) => ({ ...stored.drafts, ...prev }))
+          }
+        }
+      } catch {
+        // An unreadable copy only means starting from the backend alone.
+      }
+
+      if (isActive) {
+        setIsRestoring(false)
+      }
+    }
+
+    void restore()
+
+    return () => {
+      isActive = false
+    }
+  }, [accountId, queryClient, updateDrafts, updateLocalNotes])
+
+  // Every note the backend returns (lists, details, saves) refreshes the copy.
+  useEffect(() => {
+    if (!OFFLINE_NOTES_ENABLED) {
+      return
+    }
+
+    return queryClient.getQueryCache().subscribe((event) => {
+      if (event.type !== "updated" || event.action.type !== "success") {
+        return
+      }
+
+      const rows = notesInQuery(event.query.queryKey, event.query.state.data)
+
+      if (rows.length > 0) {
+        setCachedNotes((prev) => mergeNotes(prev, rows))
+      }
+    })
+  }, [queryClient])
+
   // New notes without a row are not fetched.
   const fetchedIds = openNoteIds.filter((id) => !(id in localNotes))
   const openQueries = useQueries({
-    queries: fetchedIds.map((id) => ({
+    queries: (isRestoring ? [] : fetchedIds).map((id) => ({
       ...noteDetailQueryOptions(id),
       initialData: () =>
         findListedNote(
@@ -228,11 +399,15 @@ export function useAccountNotesWorkspace(
   const missingIds = new Set(
     fetchedIds.filter((_, index) => openQueries[index]?.isError)
   )
+  // A new note is remembered once something is written in it, and only where
+  // the device copy keeps it.
+  const isKeptLocalNote = (id: string) =>
+    OFFLINE_NOTES_ENABLED && !isBlank({ ...localNotes[id], ...drafts[id] })
   const keptIds = openNoteIds.filter(
-    (id) => !(id in localNotes) && !missingIds.has(id)
+    (id) =>
+      (id in localNotes ? isKeptLocalNote(id) : true) && !missingIds.has(id)
   )
 
-  // Notes without a row yet are left out: they would not exist next time.
   const persistedTabsKey = JSON.stringify({
     openNoteIds: keptIds,
     selectedNoteId:
@@ -241,8 +416,10 @@ export function useAccountNotesWorkspace(
         : keptIds[0],
   })
   useEffect(() => {
-    writeOpenTabs(accountId, JSON.parse(persistedTabsKey))
-  }, [accountId, persistedTabsKey])
+    if (!isRestoring) {
+      writeOpenTabs(accountId, JSON.parse(persistedTabsKey))
+    }
+  }, [accountId, isRestoring, persistedTabsKey])
 
   const { mutate: saveNote } = updateMutation
   const { mutate: insertNote } = createMutation
@@ -261,10 +438,12 @@ export function useAccountNotesWorkspace(
       // Clicking around an empty new note must not create a row: keep the
       // edit in the local note and leave nothing pending.
       if (isBlank(pending)) {
-        updateLocalNotes((prev) => ({ ...prev, [id]: pending }))
-        updateDrafts((prev) =>
-          prev[id] === draft ? withoutKey(prev, id) : prev
-        )
+        if (Object.keys(draft).length > 0) {
+          updateLocalNotes((prev) => ({ ...prev, [id]: pending }))
+          updateDrafts((prev) =>
+            prev[id] === draft ? withoutKey(prev, id) : prev
+          )
+        }
         return
       }
 
@@ -275,6 +454,19 @@ export function useAccountNotesWorkspace(
         {
           onError: (error) => {
             creatingIdsRef.current.delete(id)
+
+            // The row already exists: an earlier insert reached the backend
+            // but the app closed before hearing back. Continue as an update.
+            if (errorMessage(error)?.includes("duplicate key")) {
+              updateLocalNotes((prev) => withoutKey(prev, id))
+              updateDrafts((prev) => ({
+                ...prev,
+                [id]: { body: pending.body, title: pending.title, ...prev[id] },
+              }))
+              flushDraftRef.current(id)
+              return
+            }
+
             setActionError(errorMessage(error) ?? "No se pudo crear la nota")
           },
           onSuccess: () => {
@@ -307,16 +499,21 @@ export function useAccountNotesWorkspace(
       clearTimeout(timer)
       saveTimersRef.current.delete(id)
 
-      const draft = draftsRef.current[id]
-
-      if (!draft) {
+      // Offline the edit stays as a draft (kept on the device) and is sent on
+      // reconnect; a request paused until then could land after a newer one.
+      if (!onlineManager.isOnline()) {
         return
       }
 
+      const draft = draftsRef.current[id]
       const localNote = localNotesRef.current[id]
 
       if (localNote) {
-        insertLocalNote(id, localNote, draft)
+        insertLocalNote(id, localNote, draft ?? {})
+        return
+      }
+
+      if (!draft) {
         return
       }
 
@@ -346,6 +543,38 @@ export function useAccountNotesWorkspace(
     flushDraftRef.current = flushDraft
   }, [flushDraft])
 
+  // Edits made offline, or restored from the last run, are sent as soon as
+  // there is a connection.
+  useEffect(() => {
+    if (isRestoring || !isOnline) {
+      return
+    }
+
+    const pendingIds = new Set([
+      ...Object.keys(draftsRef.current),
+      ...Object.keys(localNotesRef.current),
+    ])
+
+    for (const id of pendingIds) {
+      if (!saveTimersRef.current.has(id)) {
+        flushDraftRef.current(id)
+      }
+    }
+  }, [isOnline, isRestoring])
+
+  useEffect(() => {
+    if (!OFFLINE_NOTES_ENABLED || isRestoring) {
+      return
+    }
+
+    const snapshot = toOfflineSnapshot(cachedNotes, localNotes, drafts)
+    const timeout = setTimeout(() => {
+      void writeOfflineSnapshot(accountId, snapshot)
+    }, OFFLINE_SAVE_DEBOUNCE_MS)
+
+    return () => clearTimeout(timeout)
+  }, [accountId, cachedNotes, drafts, isRestoring, localNotes])
+
   // Leaving the screen or hiding the app must not lose the last keystrokes.
   useEffect(() => {
     const flushAll = () => {
@@ -354,9 +583,25 @@ export function useAccountNotesWorkspace(
       }
     }
 
+    // Closing the app or sending it to the background can kill the webview
+    // before the debounced write, so the device copy is written right away.
+    const saveOffline = () => {
+      if (OFFLINE_NOTES_ENABLED && !isRestoring) {
+        void writeOfflineSnapshot(
+          accountId,
+          toOfflineSnapshot(
+            cachedNotesRef.current,
+            localNotesRef.current,
+            draftsRef.current
+          )
+        )
+      }
+    }
+
     const flushOnHide = () => {
       if (document.visibilityState === "hidden") {
         flushAll()
+        saveOffline()
       }
     }
 
@@ -365,15 +610,36 @@ export function useAccountNotesWorkspace(
     return () => {
       document.removeEventListener("visibilitychange", flushOnHide)
       flushAll()
+      saveOffline()
     }
-  }, [flushDraft])
+  }, [accountId, flushDraft, isRestoring])
 
-  const toView = (note: Note) =>
-    toWorkspaceNote(note, drafts[note.id], pinnedIds.includes(note.id))
+  const toView = (note: Note): WorkspaceNote => ({
+    ...toWorkspaceNote(note, drafts[note.id], pinnedIds.includes(note.id)),
+    // Deleting a note that exists in the backend waits for a connection;
+    // queuing it could remove a note someone else is still editing.
+    ...(isOnline ? {} : { deleteDisabledReason: DELETE_NEEDS_CONNECTION }),
+  })
 
-  const listedNotes = (list.data?.pages ?? [])
-    .flatMap((page) => page.items)
-    .map(toView)
+  const toLocalView = (id: string): WorkspaceNote => ({
+    ...localNotes[id],
+    ...drafts[id],
+  })
+
+  const deviceCopyNotes = [
+    ...Object.keys(localNotes)
+      .filter((id) => !isBlank(toLocalView(id)))
+      .map(toLocalView),
+    ...Object.values(cachedNotes)
+      .filter((note) => !(note.id in localNotes))
+      .map(toView),
+  ]
+  // oxlint-disable-next-line unicorn/no-array-sort -- sorts the fresh array built above; toSorted is not in the ES2022 lib this project targets
+  deviceCopyNotes.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+
+  const listedNotes = isUsingDeviceCopy
+    ? filterNotes(deviceCopyNotes, filter, search)
+    : (list.data?.pages ?? []).flatMap((page) => page.items).map(toView)
 
   const fetchedNotes = new Map(
     openQueries
@@ -383,11 +649,16 @@ export function useAccountNotesWorkspace(
   )
 
   const openNotes = openNoteIds
-    .map((id) =>
-      id in localNotes
-        ? { ...localNotes[id], ...drafts[id] }
-        : fetchedNotes.get(id)
-    )
+    .filter((id) => !missingIds.has(id))
+    .map((id) => {
+      if (id in localNotes) {
+        return toLocalView(id)
+      }
+
+      // Offline (or still loading) a tab shows the device copy.
+      const cached = cachedNotes[id]
+      return fetchedNotes.get(id) ?? (cached ? toView(cached) : undefined)
+    })
     .filter((note): note is WorkspaceNote => note !== undefined)
 
   const selectNote = (id: string) => {
@@ -398,8 +669,14 @@ export function useAccountNotesWorkspace(
   const closeTab = (id: string) => {
     flushDraft(id)
 
-    // A new note closed before anything was written in it is just dropped.
-    if (id in localNotesRef.current && !creatingIdsRef.current.has(id)) {
+    // A new note closed before anything was written in it is just dropped;
+    // one with content stays until its insert lands (offline, until then).
+    const localNote = localNotesRef.current[id]
+    if (
+      localNote &&
+      !creatingIdsRef.current.has(id) &&
+      isBlank({ ...localNote, ...draftsRef.current[id] })
+    ) {
       updateLocalNotes((prev) => withoutKey(prev, id))
     }
 
@@ -441,6 +718,10 @@ export function useAccountNotesWorkspace(
   }
 
   const deleteNote = (id: string) => {
+    if (!(id in localNotesRef.current) && !isOnline) {
+      return
+    }
+
     setActionError(null)
     clearTimeout(saveTimersRef.current.get(id))
     saveTimersRef.current.delete(id)
@@ -457,6 +738,7 @@ export function useAccountNotesWorkspace(
     deleteMutation.mutate(id, {
       onError: (error) =>
         setActionError(errorMessage(error) ?? "No se pudo eliminar la nota"),
+      onSuccess: () => setCachedNotes((prev) => withoutKey(prev, id)),
     })
   }
 
@@ -467,6 +749,11 @@ export function useAccountNotesWorkspace(
   }
 
   const getSaveStatus = (): NotesSaveStatus | null => {
+    // Edits keep being saved on the device; they are sent on reconnect.
+    if (!isOnline) {
+      return "offline"
+    }
+
     if (updateMutation.isError || createMutation.isError) {
       return "error"
     }
@@ -491,16 +778,17 @@ export function useAccountNotesWorkspace(
     deleteNote,
     error:
       actionError ??
-      errorMessage(list.error) ??
+      (isUsingDeviceCopy ? null : errorMessage(list.error)) ??
       (updateMutation.isError
         ? `No se pudo guardar: ${errorMessage(updateMutation.error)}`
         : null),
-    hasMore: list.hasNextPage,
-    isLoading: list.isPending,
+    hasMore: !isUsingDeviceCopy && list.hasNextPage,
+    isLoading: isRestoring || (!isUsingDeviceCopy && list.isPending),
     isLoadingMore: list.isFetchingNextPage,
     loadMore: () => {
       void list.fetchNextPage()
     },
+    isOffline: !isOnline,
     notes: listedNotes,
     openNotes,
     saveStatus: getSaveStatus(),

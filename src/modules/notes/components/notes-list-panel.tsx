@@ -220,8 +220,10 @@ function NoteListCard({
         {note.isOwner ? (
           <button
             aria-label="Eliminar nota"
-            className="text-muted-foreground/50 hover:text-destructive rounded-sm"
+            className="text-muted-foreground/50 hover:text-destructive rounded-sm disabled:pointer-events-none disabled:opacity-40"
+            disabled={Boolean(note.deleteDisabledReason)}
             onClick={onRequestDelete}
+            title={note.deleteDisabledReason}
             type="button"
           >
             {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's

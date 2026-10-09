@@ -22,7 +22,9 @@ export interface DeviceNotesWorkspace {
 }
 
 /** JSON has no Date, so `createdAt` travels as an ISO string. */
-type StoredNote = Omit<WorkspaceNote, "createdAt"> & { createdAt: string }
+export type StoredNote = Omit<WorkspaceNote, "createdAt"> & {
+  createdAt: string
+}
 
 interface StoredWorkspace {
   version: number
@@ -31,11 +33,11 @@ interface StoredWorkspace {
   selectedNoteId?: string
 }
 
-function toStoredNote(note: WorkspaceNote): StoredNote {
+export function toStoredNote(note: WorkspaceNote): StoredNote {
   return { ...note, createdAt: note.createdAt.toISOString() }
 }
 
-function fromStoredNote(note: StoredNote): WorkspaceNote {
+export function fromStoredNote(note: StoredNote): WorkspaceNote {
   const createdAt = new Date(note.createdAt)
 
   return {

@@ -33,6 +33,7 @@ import { ScrollArea } from "@/shared/components/ui/scroll-area"
 
 const SAVE_STATUS_LABEL: Record<NotesSaveStatus, string> = {
   error: "Error al guardar",
+  offline: "Sin conexión",
   saved: "Guardado",
   saving: "Guardando…",
 }
@@ -40,6 +41,8 @@ const SAVE_STATUS_LABEL: Record<NotesSaveStatus, string> = {
 interface NoteEditorPanelProps {
   /** Sharing and reminders need an account; guests do not see them. */
   canCollaborate: boolean
+  /** Sharing and reminders also need a connection. */
+  isOffline?: boolean
   note: WorkspaceNote | undefined
   openNotes: WorkspaceNote[]
   onUpdateNote: (
@@ -62,6 +65,7 @@ interface NoteEditorPanelProps {
 
 export function NoteEditorPanel({
   canCollaborate,
+  isOffline = false,
   note,
   openNotes,
   onUpdateNote,
@@ -117,18 +121,26 @@ export function NoteEditorPanel({
                   and wrapped every label onto two lines. */}
                 <DropdownMenuContent className="w-auto">
                   {canCollaborate && note.isOwner && (
-                    <DropdownMenuItem onClick={() => setIsShareOpen(true)}>
+                    <DropdownMenuItem
+                      disabled={isOffline}
+                      onClick={() => setIsShareOpen(true)}
+                    >
                       <Share2Icon /> Compartir nota
                     </DropdownMenuItem>
                   )}
                   {canCollaborate && (
-                    <DropdownMenuItem onClick={() => setIsReminderOpen(true)}>
+                    <DropdownMenuItem
+                      disabled={isOffline}
+                      onClick={() => setIsReminderOpen(true)}
+                    >
                       <BellIcon /> Recordatorio
                     </DropdownMenuItem>
                   )}
                   {note.isOwner && (
                     <DropdownMenuItem
+                      disabled={Boolean(note.deleteDisabledReason)}
                       onClick={() => setIsDeleteOpen(true)}
+                      title={note.deleteDisabledReason}
                       variant="destructive"
                     >
                       <Trash2Icon /> Eliminar nota

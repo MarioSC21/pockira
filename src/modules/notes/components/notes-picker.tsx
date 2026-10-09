@@ -447,7 +447,9 @@ function NotePickerRow({
             <Button
               aria-label="Eliminar nota"
               className="hover:text-destructive"
+              disabled={Boolean(note.deleteDisabledReason)}
               onClick={onRequestDelete}
+              title={note.deleteDisabledReason}
               size="icon-xs"
               variant="ghost"
             >
@@ -477,7 +479,9 @@ function NotePickerRow({
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    disabled={Boolean(note.deleteDisabledReason)}
                     onClick={onRequestDelete}
+                    title={note.deleteDisabledReason}
                     variant="destructive"
                   >
                     <Trash2Icon /> Eliminar
@@ -498,7 +502,12 @@ function NotePickerRow({
         {note.isOwner && (
           <>
             <ContextMenuSeparator />
-            <ContextMenuItem onClick={onRequestDelete} variant="destructive">
+            <ContextMenuItem
+              disabled={Boolean(note.deleteDisabledReason)}
+              onClick={onRequestDelete}
+              title={note.deleteDisabledReason}
+              variant="destructive"
+            >
               <Trash2Icon /> Eliminar
             </ContextMenuItem>
           </>

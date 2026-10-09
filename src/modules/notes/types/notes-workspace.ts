@@ -4,7 +4,7 @@ import type {
   WorkspaceNotePatch,
 } from "@/modules/notes/lib/workspace-note"
 
-export type NotesSaveStatus = "saving" | "saved" | "error"
+export type NotesSaveStatus = "saving" | "saved" | "error" | "offline"
 
 /** What the list is currently asking for. */
 export interface NotesWorkspaceQuery {
@@ -30,6 +30,8 @@ export interface NotesWorkspace {
   loadMore: () => void
   /** Account features (sharing, reminders) need the backend. */
   canCollaborate: boolean
+  /** No connection: features that need the backend are disabled. */
+  isOffline: boolean
   selectNote: (id: string) => void
   closeTab: (id: string) => void
   createNote: () => Promise<WorkspaceNote | null>

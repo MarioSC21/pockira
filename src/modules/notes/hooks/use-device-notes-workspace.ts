@@ -209,6 +209,7 @@ export function useDeviceNotesWorkspace({
       : null,
     hasMore: false,
     isLoading: isRestoring,
+    isOffline: false,
     isLoadingMore: false,
     loadMore: () => null,
     notes: filterNotes(notes, filter, search),
