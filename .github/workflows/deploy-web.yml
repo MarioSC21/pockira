@@ -52,9 +52,10 @@ jobs:
           VITE_INSFORGE_URL: ${{ secrets.VITE_INSFORGE_URL }}
           VITE_INSFORGE_ANON_KEY: ${{ secrets.VITE_INSFORGE_ANON_KEY }}
 
+      # cloudflare/wrangler-action installs wrangler with `pnpm add`, which
+      # pnpm 11 rejects over its ignored build scripts, so run it directly.
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name pockira-app --branch main
+        run: npx --yes wrangler@4 pages deploy dist --project-name pockira-app --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
