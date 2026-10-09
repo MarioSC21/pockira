@@ -238,7 +238,9 @@ function NoteEditorBody({
     <ScrollArea className="min-h-0 flex-1 px-6 pb-6">
       <Plate
         editor={editor}
-        onChange={({ value }: { value: Value }) => {
+        // onValueChange, not onChange: onChange also fires when only the
+        // selection moves, so a click would mark the note as edited.
+        onValueChange={({ value }: { value: Value }) => {
           onUpdateNote(note.id, { body: value })
         }}
       >

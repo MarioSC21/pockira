@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
   emptyNoteBody,
+  extractText,
   toEditorValue,
   toNoteContent,
 } from "@/modules/notes/lib/note-body"
@@ -124,6 +125,11 @@ function toWorkspaceNote(
   }
 }
 
+/** Nothing worth a row in the database has been written yet. */
+function isBlank(note: Pick<WorkspaceNote, "title" | "body">) {
+  return note.title.trim() === "" && extractText(note.body) === ""
+}
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : null
 }
@@ -131,7 +137,8 @@ function errorMessage(error: unknown) {
 /**
  * Signed-in mode: notes come from the backend through TanStack Query. The
  * open tabs and the pinned set are UI state; edits are kept as local drafts
- * and saved after a short pause in typing.
+ * and saved after a short pause in typing. A new note lives only here until
+ * something is written in it; its first save inserts the row.
  */
 export function useAccountNotesWorkspace({
   filter,
@@ -150,14 +157,40 @@ export function useAccountNotesWorkspace({
   const [selectedNoteId, setSelectedNoteId] = useState<string>()
   const [pinnedIds, setPinnedIds] = useState<string[]>([])
   const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  // Notes opened with "new note" that have no row yet.
+  const [localNotes, setLocalNotes] = useState<Record<string, WorkspaceNote>>(
+    {}
+  )
   const [actionError, setActionError] = useState<string | null>(null)
 
+  // Refs are written eagerly: flushDraft runs from timers and callbacks
+  // before React renders the change.
   const draftsRef = useRef(drafts)
+  const localNotesRef = useRef(localNotes)
+  // Local notes whose insert is in flight.
+  const creatingIdsRef = useRef(new Set<string>())
   const saveTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  const flushDraftRef = useRef<(id: string) => void>(() => null)
 
-  useEffect(() => {
-    draftsRef.current = drafts
-  }, [drafts])
+  const updateDrafts = useCallback(
+    (update: (prev: Record<string, Draft>) => Record<string, Draft>) => {
+      draftsRef.current = update(draftsRef.current)
+      setDrafts(draftsRef.current)
+    },
+    []
+  )
+
+  const updateLocalNotes = useCallback(
+    (
+      update: (
+        prev: Record<string, WorkspaceNote>
+      ) => Record<string, WorkspaceNote>
+    ) => {
+      localNotesRef.current = update(localNotesRef.current)
+      setLocalNotes(localNotesRef.current)
+    },
+    []
+  )
 
   // Someone may have shared notes with this email before the account
   // existed; claiming them once per session makes them show up.
@@ -167,19 +200,77 @@ export function useAccountNotesWorkspace({
   }, [claim])
 
   const openQueries = useQueries({
-    queries: openNoteIds.map((id) => ({
-      ...noteDetailQueryOptions(id),
-      initialData: () =>
-        findListedNote(
-          queryClient.getQueriesData<InfiniteData<ListNotesResult>>({
-            queryKey: noteKeys.lists(),
-          }),
-          id
-        ),
-    })),
+    queries: openNoteIds
+      .filter((id) => !(id in localNotes))
+      .map((id) => ({
+        ...noteDetailQueryOptions(id),
+        initialData: () =>
+          findListedNote(
+            queryClient.getQueriesData<InfiniteData<ListNotesResult>>({
+              queryKey: noteKeys.lists(),
+            }),
+            id
+          ),
+      })),
   })
 
   const { mutate: saveNote } = updateMutation
+  const { mutate: insertNote } = createMutation
+  const { mutate: removeNote } = deleteMutation
+
+  // First save of a new note: insert the row, unless it is still blank.
+  const insertLocalNote = useCallback(
+    (id: string, localNote: WorkspaceNote, draft: Draft) => {
+      // The insert's success re-flushes whatever was typed meanwhile.
+      if (creatingIdsRef.current.has(id)) {
+        return
+      }
+
+      const pending = { ...localNote, ...draft }
+
+      // Clicking around an empty new note must not create a row: keep the
+      // edit in the local note and leave nothing pending.
+      if (isBlank(pending)) {
+        updateLocalNotes((prev) => ({ ...prev, [id]: pending }))
+        updateDrafts((prev) =>
+          prev[id] === draft ? withoutKey(prev, id) : prev
+        )
+        return
+      }
+
+      creatingIdsRef.current.add(id)
+      setActionError(null)
+      insertNote(
+        { content: toNoteContent(pending.body), id, title: pending.title },
+        {
+          onError: (error) => {
+            creatingIdsRef.current.delete(id)
+            setActionError(errorMessage(error) ?? "No se pudo crear la nota")
+          },
+          onSuccess: () => {
+            creatingIdsRef.current.delete(id)
+
+            // Deleted while the insert was in flight.
+            if (!(id in localNotesRef.current)) {
+              removeNote(id)
+              return
+            }
+
+            updateLocalNotes((prev) => withoutKey(prev, id))
+
+            if (draftsRef.current[id] === draft) {
+              updateDrafts((prev) => withoutKey(prev, id))
+            } else if (draftsRef.current[id]) {
+              // More typing happened during the insert; now it is an update.
+              flushDraftRef.current(id)
+            }
+          },
+        }
+      )
+    },
+    [insertNote, removeNote, updateDrafts, updateLocalNotes]
+  )
+
   const flushDraft = useCallback(
     (id: string) => {
       const timer = saveTimersRef.current.get(id)
@@ -189,6 +280,13 @@ export function useAccountNotesWorkspace({
       const draft = draftsRef.current[id]
 
       if (!draft) {
+        return
+      }
+
+      const localNote = localNotesRef.current[id]
+
+      if (localNote) {
+        insertLocalNote(id, localNote, draft)
         return
       }
 
@@ -204,18 +302,19 @@ export function useAccountNotesWorkspace({
           onSuccess: () => {
             // Keep the draft if more typing happened while this was in flight;
             // its own timer will send it.
-            setDrafts((prev) => {
-              if (prev[id] !== draft) {
-                return prev
-              }
-              return withoutKey(prev, id)
-            })
+            updateDrafts((prev) =>
+              prev[id] === draft ? withoutKey(prev, id) : prev
+            )
           },
         }
       )
     },
-    [saveNote]
+    [insertLocalNote, saveNote, updateDrafts]
   )
+
+  useEffect(() => {
+    flushDraftRef.current = flushDraft
+  }, [flushDraft])
 
   // Leaving the screen or hiding the app must not lose the last keystrokes.
   useEffect(() => {
@@ -246,10 +345,20 @@ export function useAccountNotesWorkspace({
     .flatMap((page) => page.items)
     .map(toView)
 
-  const openNotes = openQueries
-    .map((query) => query.data)
-    .filter((note): note is Note => note !== undefined)
-    .map(toView)
+  const fetchedNotes = new Map(
+    openQueries
+      .map((query) => query.data)
+      .filter((note): note is Note => note !== undefined)
+      .map((note) => [note.id, toView(note)])
+  )
+
+  const openNotes = openNoteIds
+    .map((id) =>
+      id in localNotes
+        ? { ...localNotes[id], ...drafts[id] }
+        : fetchedNotes.get(id)
+    )
+    .filter((note): note is WorkspaceNote => note !== undefined)
 
   const selectNote = (id: string) => {
     setSelectedNoteId(id)
@@ -258,6 +367,11 @@ export function useAccountNotesWorkspace({
 
   const closeTab = (id: string) => {
     flushDraft(id)
+
+    // A new note closed before anything was written in it is just dropped.
+    if (id in localNotesRef.current && !creatingIdsRef.current.has(id)) {
+      updateLocalNotes((prev) => withoutKey(prev, id))
+    }
 
     const closingIndex = openNoteIds.indexOf(id)
     const nextOpenNoteIds = openNoteIds.filter(
@@ -270,32 +384,24 @@ export function useAccountNotesWorkspace({
     }
   }
 
-  const createNote = async () => {
-    setActionError(null)
-
-    try {
-      const created = await createMutation.mutateAsync({
-        content: toNoteContent(emptyNoteBody()),
-        title: "",
-      })
-      selectNote(created.id)
-      return toWorkspaceNote(
-        { ...created, is_owner: true, is_shared: false },
-        undefined,
-        false
-      )
-    } catch (error) {
-      setActionError(errorMessage(error) ?? "No se pudo crear la nota")
-      return null
+  const createNote = () => {
+    const created: WorkspaceNote = {
+      body: emptyNoteBody(),
+      createdAt: new Date(),
+      // Picked here so the open tab keeps its id once the row is inserted.
+      id: crypto.randomUUID(),
+      isOwner: true,
+      pinned: false,
+      shared: false,
+      title: "",
     }
+    updateLocalNotes((prev) => ({ ...prev, [created.id]: created }))
+    selectNote(created.id)
+    return Promise.resolve(created)
   }
 
   const updateNote = (id: string, patch: WorkspaceNotePatch) => {
-    setDrafts((prev) => {
-      const next = { ...prev, [id]: { ...prev[id], ...patch } }
-      draftsRef.current = next
-      return next
-    })
+    updateDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }))
 
     clearTimeout(saveTimersRef.current.get(id))
     saveTimersRef.current.set(
@@ -308,7 +414,15 @@ export function useAccountNotesWorkspace({
     setActionError(null)
     clearTimeout(saveTimersRef.current.get(id))
     saveTimersRef.current.delete(id)
-    setDrafts((prev) => withoutKey(prev, id))
+    updateDrafts((prev) => withoutKey(prev, id))
+
+    if (id in localNotesRef.current) {
+      // No row yet; an insert still in flight deletes its row when it lands.
+      updateLocalNotes((prev) => withoutKey(prev, id))
+      closeTab(id)
+      return
+    }
+
     closeTab(id)
     deleteMutation.mutate(id, {
       onError: (error) =>
@@ -322,15 +436,22 @@ export function useAccountNotesWorkspace({
     )
   }
 
-  const getSaveStatus = (): NotesSaveStatus => {
-    if (updateMutation.isError) {
+  const getSaveStatus = (): NotesSaveStatus | null => {
+    if (updateMutation.isError || createMutation.isError) {
       return "error"
     }
 
     const hasPending =
-      Object.keys(drafts).length > 0 || updateMutation.isPending
+      Object.keys(drafts).length > 0 ||
+      updateMutation.isPending ||
+      createMutation.isPending
 
-    return hasPending ? "saving" : "saved"
+    if (hasPending) {
+      return "saving"
+    }
+
+    // An untouched new note has nothing saved to report.
+    return selectedNoteId && selectedNoteId in localNotes ? null : "saved"
   }
 
   return {

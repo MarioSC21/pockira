@@ -81,7 +81,12 @@ export const note = {
     return data as Note
   },
 
-  async create(input: { title: string; content: TiptapDoc }): Promise<Note> {
+  /** `id` lets the client pick the id of a note it already shows. */
+  async create(input: {
+    id?: string
+    title: string
+    content: TiptapDoc
+  }): Promise<Note> {
     const { data, error } = await insforge.database
       .from("notes")
       .insert([input])

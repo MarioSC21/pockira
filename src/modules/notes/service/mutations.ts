@@ -16,7 +16,7 @@ export function useCreateNote() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: { title: string; content: TiptapDoc }) =>
+    mutationFn: (input: { id?: string; title: string; content: TiptapDoc }) =>
       note.create(input),
     onSuccess: async (created) => {
       // The row comes back without the computed flags list_notes adds.
