@@ -84,6 +84,10 @@ export function useDeviceNotesWorkspace({
         const stored = await loadDeviceNotesWorkspace()
 
         if (isActive && stored) {
+          // Also right away, not only after the next render: if that render
+          // crashes, the flush on unmount would otherwise write the empty
+          // initial workspace over the stored notes.
+          workspaceRef.current = stored
           setNotes(stored.notes)
           setOpenNoteIds(stored.openNoteIds)
           setSelectedNoteId(stored.selectedNoteId)

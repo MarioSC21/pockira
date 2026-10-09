@@ -287,14 +287,18 @@ export function useAccountNotesWorkspace(
   const flushDraftRef = useRef<(id: string) => void>(() => null)
   const cachedNotesRef = useRef(cachedNotes)
 
-  useEffect(() => {
-    cachedNotesRef.current = cachedNotes
-  }, [cachedNotes])
-
   const updateDrafts = useCallback(
     (update: (prev: Record<string, Draft>) => Record<string, Draft>) => {
       draftsRef.current = update(draftsRef.current)
       setDrafts(draftsRef.current)
+    },
+    []
+  )
+
+  const updateCachedNotes = useCallback(
+    (update: (prev: Record<string, Note>) => Record<string, Note>) => {
+      cachedNotesRef.current = update(cachedNotesRef.current)
+      setCachedNotes(cachedNotesRef.current)
     },
     []
   )
@@ -336,7 +340,7 @@ export function useAccountNotesWorkspace(
           .flatMap(([queryKey, data]) => notesInQuery(queryKey, data))
 
         if (isActive) {
-          setCachedNotes((prev) =>
+          updateCachedNotes((prev) =>
             mergeNotes({ ...stored?.notes, ...prev }, seen)
           )
 
@@ -359,7 +363,13 @@ export function useAccountNotesWorkspace(
     return () => {
       isActive = false
     }
-  }, [accountId, queryClient, updateDrafts, updateLocalNotes])
+  }, [
+    accountId,
+    queryClient,
+    updateCachedNotes,
+    updateDrafts,
+    updateLocalNotes,
+  ])
 
   // Every note the backend returns (lists, details, saves) refreshes the copy.
   useEffect(() => {
@@ -375,10 +385,10 @@ export function useAccountNotesWorkspace(
       const rows = notesInQuery(event.query.queryKey, event.query.state.data)
 
       if (rows.length > 0) {
-        setCachedNotes((prev) => mergeNotes(prev, rows))
+        updateCachedNotes((prev) => mergeNotes(prev, rows))
       }
     })
-  }, [queryClient])
+  }, [queryClient, updateCachedNotes])
 
   // New notes without a row are not fetched.
   const fetchedIds = openNoteIds.filter((id) => !(id in localNotes))
@@ -741,7 +751,7 @@ export function useAccountNotesWorkspace(
     deleteMutation.mutate(id, {
       onError: (error) =>
         setActionError(errorMessage(error) ?? "No se pudo eliminar la nota"),
-      onSuccess: () => setCachedNotes((prev) => withoutKey(prev, id)),
+      onSuccess: () => updateCachedNotes((prev) => withoutKey(prev, id)),
     })
   }
 
