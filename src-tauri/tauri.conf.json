@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Pockira",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "identifier": "com.mario.pockira-multiplatform",
   "build": {
     "beforeDevCommand": "pnpm dev",
