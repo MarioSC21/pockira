@@ -1,4 +1,4 @@
-import { insforge } from "@/shared/service/insforge-client"
+import { insforge, whenSessionRestored } from "@/shared/service/insforge-client"
 
 import type {
   Note,
@@ -40,6 +40,8 @@ export const note = {
     cursor,
     limit = 20,
   }: ListNotesParams): Promise<ListNotesResult> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database.rpc("list_notes", {
       p_cursor_id: cursor?.id ?? null,
       p_cursor_updated_at: cursor?.updatedAt ?? null,
@@ -70,6 +72,8 @@ export const note = {
 
   /** Read through get_note so it carries the same flags as the list. */
   async get(id: string): Promise<Note> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database.rpc("get_note", {
       p_note_id: id,
     })
@@ -93,6 +97,8 @@ export const note = {
     title: string
     content: TiptapDoc
   }): Promise<Note> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("notes")
       .insert([input])
@@ -110,6 +116,8 @@ export const note = {
   async createMany(
     inputs: { title: string; content: TiptapDoc }[]
   ): Promise<Note[]> {
+    await whenSessionRestored()
+
     if (inputs.length === 0) {
       return []
     }
@@ -130,6 +138,8 @@ export const note = {
     id: string,
     input: Partial<{ title: string; content: TiptapDoc }>
   ): Promise<Note> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("notes")
       .update(input)
@@ -146,6 +156,8 @@ export const note = {
 
   /** Shares sent to the signed-in email that wait for an answer. */
   async invitations(): Promise<NoteInvitation[]> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database.rpc("list_note_invitations")
 
     if (error) {
@@ -156,6 +168,8 @@ export const note = {
   },
 
   async respondInvitation(accessId: string, accept: boolean): Promise<void> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database.rpc(
       "respond_note_invitation",
       { p_accept: accept, p_access_id: accessId }
@@ -173,6 +187,8 @@ export const note = {
   /** Removes a note shared with the signed-in person from their notes; the
       owner's note is untouched. */
   async leave(id: string): Promise<void> {
+    await whenSessionRestored()
+
     const { error } = await insforge.database.rpc("leave_shared_note", {
       p_note_id: id,
     })
@@ -184,6 +200,8 @@ export const note = {
 
   /** Soft delete: the row stays for the owner's history and RLS hides it. */
   async remove(id: string): Promise<void> {
+    await whenSessionRestored()
+
     const { error } = await insforge.database
       .from("notes")
       .update({ deleted_at: new Date().toISOString() })
@@ -198,6 +216,8 @@ export const note = {
     noteId: string,
     input: { email: string; role: NoteAccessRole }
   ): Promise<{ access: NoteAccess; emailSent: boolean; emailError?: string }> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("note_accesses")
       .insert([
@@ -225,6 +245,8 @@ export const note = {
   },
 
   async collaborators(noteId: string): Promise<NoteAccess[]> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("note_accesses")
       .select(
@@ -243,6 +265,8 @@ export const note = {
   /** The signed-in person's scheduled reminders (RLS limits them to their own
       on notes they can still read), with each note's title. */
   async upcomingReminders(): Promise<UpcomingReminder[]> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("reminders")
       .select(
@@ -271,6 +295,8 @@ export const note = {
     noteId: string,
     input: { remindAt: string; repeatInterval: ReminderRepeatInterval }
   ): Promise<Reminder> {
+    await whenSessionRestored()
+
     const { data, error } = await insforge.database
       .from("reminders")
       .insert([

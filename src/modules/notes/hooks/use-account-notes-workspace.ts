@@ -189,6 +189,25 @@ function mergeNotes(previous: Record<string, Note>, rows: Note[]) {
 }
 
 /**
+ * Copies saved by earlier versions may hold rows read before the session was
+ * restored, without the person's identity: is_owner came back null and
+ * can_edit false, which opened their own notes read-only. The owner is known
+ * from owner_id; a note shared with them stays as stored until the backend
+ * answers again.
+ */
+function repairStoredNotes(notes: Record<string, Note>, accountId: string) {
+  return Object.fromEntries(
+    Object.entries(notes).map(([id, note]) => {
+      if (note.is_owner !== null || note.owner_id !== accountId) {
+        return [id, note]
+      }
+
+      return [id, { ...note, can_edit: true, is_owner: true }]
+    })
+  )
+}
+
+/**
  * What the device copy keeps to reopen and finish the work: the notes seen,
  * the new notes with something written, and the unsaved edits.
  */
@@ -335,7 +354,13 @@ export function useAccountNotesWorkspace(
 
         if (isActive) {
           updateCachedNotes((prev) =>
-            mergeNotes({ ...stored?.notes, ...prev }, seen)
+            mergeNotes(
+              {
+                ...(stored && repairStoredNotes(stored.notes, accountId)),
+                ...prev,
+              },
+              seen
+            )
           )
 
           if (stored) {
