@@ -1,6 +1,8 @@
 import type { UserSchema } from "@insforge/sdk"
 import { queryOptions, useQuery } from "@tanstack/react-query"
 
+import { hasPendingOAuthCallback } from "@/shared/service/insforge-client"
+
 import { readGuestMode, writeGuestMode } from "../lib/guest-mode"
 import {
   readSessionSnapshot,
@@ -24,7 +26,9 @@ export const sessionQueryOptions = () =>
     // leaving the window blank while the backend answers. It is marked as
     // already stale, so the first screen that reads it confirms it in the
     // background (see ProtectedRoute for what happens if it was revoked).
-    initialData: readSessionSnapshot,
+    // Back from a web OAuth redirect the snapshot still says signed out, so
+    // the guards wait for the code exchange instead.
+    initialData: hasPendingOAuthCallback ? undefined : readSessionSnapshot,
     initialDataUpdatedAt: 0,
     queryFn: async (): Promise<Session> => {
       const user = await auth.currentUser()
