@@ -31,10 +31,33 @@ export const BlockList: RenderNodeWrapper = (props) => {
     return
   }
   if (!isOrderedList(props.element)) {
-    return
+    return (props) => (
+      <>
+        <BulletMarker {...props} />
+        {props.children}
+      </>
+    )
   }
 
   return (props) => <List {...props} />
+}
+
+function BulletMarker({ element }: PlateElementProps) {
+  return (
+    <span
+      aria-hidden="true"
+      // Static positioning follows the block's padding and first text line.
+      // A separate element leaves ::before available for block placeholders.
+      className={cn(
+        "pointer-events-none absolute -left-3 mt-[calc(0.5lh-2.5px)] size-[5px] rounded-full select-none",
+        element.listStyleType === "circle"
+          ? "border border-current"
+          : "bg-current",
+        element.listStyleType === "square" && "rounded-none"
+      )}
+      contentEditable={false}
+    />
+  )
 }
 
 function List(props: PlateElementProps & { lineBreakBadge?: React.ReactNode }) {
