@@ -4,6 +4,7 @@ import type {
   Note,
   NoteAccess,
   NoteAccessRole,
+  NoteInvitation,
   NoteScope,
   Reminder,
   ReminderRepeatInterval,
@@ -67,18 +68,23 @@ export const note = {
     }
   },
 
+  /** Read through get_note so it carries the same flags as the list. */
   async get(id: string): Promise<Note> {
-    const { data, error } = await insforge.database
-      .from("notes")
-      .select()
-      .eq("id", id)
-      .single()
+    const { data, error } = await insforge.database.rpc("get_note", {
+      p_note_id: id,
+    })
 
-    if (error || !data) {
-      throw new Error(error?.message ?? "Nota no encontrada")
+    if (error) {
+      throw new Error(error.message)
     }
 
-    return data as Note
+    const [found] = (data ?? []) as Note[]
+
+    if (!found) {
+      throw new Error("Nota no encontrada")
+    }
+
+    return found
   },
 
   /** `id` lets the client pick the id of a note it already shows. */
@@ -138,18 +144,42 @@ export const note = {
     return data as Note
   },
 
-  /** Turns pending invitations sent to the signed-in email into access.
-      Returns how many were claimed. */
-  async claimInvitations(): Promise<number> {
+  /** Shares sent to the signed-in email that wait for an answer. */
+  async invitations(): Promise<NoteInvitation[]> {
+    const { data, error } = await insforge.database.rpc("list_note_invitations")
+
+    if (error) {
+      throw new Error(error.message)
+    }
+
+    return (data ?? []) as NoteInvitation[]
+  },
+
+  async respondInvitation(accessId: string, accept: boolean): Promise<void> {
     const { data, error } = await insforge.database.rpc(
-      "claim_note_invitations"
+      "respond_note_invitation",
+      { p_accept: accept, p_access_id: accessId }
     )
 
     if (error) {
       throw new Error(error.message)
     }
 
-    return typeof data === "number" ? data : 0
+    if (data !== true) {
+      throw new Error("La invitación ya no está disponible")
+    }
+  },
+
+  /** Removes a note shared with the signed-in person from their notes; the
+      owner's note is untouched. */
+  async leave(id: string): Promise<void> {
+    const { error } = await insforge.database.rpc("leave_shared_note", {
+      p_note_id: id,
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
   },
 
   /** Soft delete: the row stays for the owner's history and RLS hides it. */

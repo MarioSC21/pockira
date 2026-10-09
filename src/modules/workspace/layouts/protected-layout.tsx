@@ -26,9 +26,14 @@ const navigationItems = [
 interface ProtectedLayoutProps {
   /** Account controls pinned to the bottom of the sidebar. */
   footer?: ReactNode
+  /** Shown above the theme menu (signed-in accounts only). */
+  notifications?: ReactNode
 }
 
-export function ProtectedLayout({ footer }: ProtectedLayoutProps) {
+export function ProtectedLayout({
+  footer,
+  notifications,
+}: ProtectedLayoutProps) {
   return (
     // h-app / top offset: the desktop title bar takes the top of the window,
     // so the sidebar and the content fit below it instead of the full viewport.
@@ -75,6 +80,7 @@ export function ProtectedLayout({ footer }: ProtectedLayoutProps) {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter>
+          {notifications}
           <ThemeMenu />
           {footer}
         </SidebarFooter>

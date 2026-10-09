@@ -39,9 +39,9 @@ import type {
 } from "@/modules/notes/service/api"
 import { noteKeys } from "@/modules/notes/service/keys"
 import {
-  useClaimNoteInvitations,
   useCreateNote,
   useDeleteNote,
+  useLeaveNote,
   useUpdateNote,
 } from "@/modules/notes/service/mutations"
 import {
@@ -144,6 +144,7 @@ function toWorkspaceNote(
 ): WorkspaceNote {
   return {
     body: draft?.body ?? toEditorValue(note.content),
+    canEdit: note.can_edit ?? true,
     // list_notes files notes under the day they were created, the same date
     // the card shows.
     createdAt: new Date(note.created_at),
@@ -255,7 +256,7 @@ export function useAccountNotesWorkspace(
   const createMutation = useCreateNote()
   const updateMutation = useUpdateNote()
   const deleteMutation = useDeleteNote()
-  const claimInvitations = useClaimNoteInvitations()
+  const leaveMutation = useLeaveNote()
 
   const [openNoteIds, setOpenNoteIds] = useState(
     () => readOpenTabs(accountId).openNoteIds
@@ -314,13 +315,6 @@ export function useAccountNotesWorkspace(
     },
     []
   )
-
-  // Someone may have shared notes with this email before the account
-  // existed; claiming them once per session makes them show up.
-  const { mutate: claim } = claimInvitations
-  useEffect(() => {
-    claim()
-  }, [claim])
 
   // Brings back the device copy and the edits that were still pending when
   // the app closed; until then nothing is fetched or remembered, so the
@@ -706,6 +700,7 @@ export function useAccountNotesWorkspace(
     const now = new Date()
     const created: WorkspaceNote = {
       body: emptyNoteBody(),
+      canEdit: true,
       createdAt: now,
       // Picked here so the open tab keeps its id once the row is inserted.
       id: crypto.randomUUID(),
@@ -730,6 +725,16 @@ export function useAccountNotesWorkspace(
     )
   }
 
+  const findKnownNote = (id: string): Note | undefined =>
+    queryClient.getQueryData<Note>(noteKeys.detail(id)) ??
+    findListedNote(
+      queryClient.getQueriesData<InfiniteData<ListNotesResult>>({
+        queryKey: noteKeys.lists(),
+      }),
+      id
+    ) ??
+    cachedNotesRef.current[id]
+
   const deleteNote = (id: string) => {
     if (!(id in localNotesRef.current) && !isOnline) {
       return
@@ -748,9 +753,19 @@ export function useAccountNotesWorkspace(
     }
 
     closeTab(id)
-    deleteMutation.mutate(id, {
+
+    // A note shared with this account is only removed from its notes; the
+    // owner's note stays.
+    const isShared = findKnownNote(id)?.is_owner === false
+    const mutation = isShared ? leaveMutation : deleteMutation
+    mutation.mutate(id, {
       onError: (error) =>
-        setActionError(errorMessage(error) ?? "No se pudo eliminar la nota"),
+        setActionError(
+          errorMessage(error) ??
+            (isShared
+              ? "No se pudo quitar la nota"
+              : "No se pudo eliminar la nota")
+        ),
       onSuccess: () => updateCachedNotes((prev) => withoutKey(prev, id)),
     })
   }

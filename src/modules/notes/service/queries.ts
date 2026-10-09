@@ -41,6 +41,16 @@ export const noteCollaboratorsQueryOptions = (noteId: string) =>
 export const useNoteCollaborators = (noteId: string) =>
   useQuery(noteCollaboratorsQueryOptions(noteId))
 
+export const noteInvitationsQueryOptions = () =>
+  queryOptions({
+    queryFn: note.invitations,
+    queryKey: noteKeys.invitations(),
+    // Picks up shares sent while the app stays open.
+    refetchInterval: 60 * 1000,
+  })
+
+export const useNoteInvitations = () => useQuery(noteInvitationsQueryOptions())
+
 export const deviceNotesQueryOptions = () =>
   queryOptions({
     queryFn: async () => {

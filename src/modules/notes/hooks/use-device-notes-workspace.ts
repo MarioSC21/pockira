@@ -164,6 +164,7 @@ export function useDeviceNotesWorkspace({
       body: emptyNoteBody(),
       createdAt: now,
       id: crypto.randomUUID(),
+      canEdit: true,
       isOwner: true,
       pinned: false,
       shared: false,

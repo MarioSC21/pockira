@@ -13,6 +13,8 @@ export interface Note {
   /** Computed by list_notes; a plain row read from the table lacks them. */
   is_owner?: boolean
   is_shared?: boolean
+  /** False for a note shared with the caller as "Puede ver". */
+  can_edit?: boolean
 }
 
 export type NoteScope = "all" | "personal" | "shared"
@@ -30,6 +32,17 @@ export interface NoteAccess {
   created_at: string
   accepted_at: string | null
   revoked_at: string | null
+}
+
+/** A share waiting for the signed-in person to accept or decline it. */
+export interface NoteInvitation {
+  id: string
+  note_id: string
+  note_title: string
+  role: NoteAccessRole
+  inviter_name: string | null
+  inviter_email: string
+  created_at: string
 }
 
 export type ReminderRepeatInterval = "none" | "daily" | "weekly" | "monthly"

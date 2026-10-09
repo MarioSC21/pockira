@@ -21,9 +21,12 @@ export interface WorkspaceNote {
   updatedAt: Date
   /** Drives the "Personales" / "Compartidas" tabs. */
   shared: boolean
-  /** Only the owner may delete or share a note. */
+  /** Only the owner may delete or share a note; anyone else may only remove
+      it from their own notes. */
   isOwner: boolean
-  /** Set when the owner cannot delete it right now (e.g. offline). */
+  /** False for a note shared as "Puede ver": it opens read-only. */
+  canEdit: boolean
+  /** Set when it cannot be deleted or removed right now (e.g. offline). */
   deleteDisabledReason?: string
 }
 

@@ -230,6 +230,9 @@ export function NotesPicker({
       </Popover>
       {noteIdToDelete && (
         <DeleteNoteDialog
+          isOwner={
+            notes.find((item) => item.id === noteIdToDelete)?.isOwner ?? true
+          }
           onConfirm={() => onDeleteNote(noteIdToDelete)}
           onOpenChange={(isDialogOpen) => {
             if (!isDialogOpen) {
@@ -384,6 +387,8 @@ function NotePickerRow({
 }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const pinLabel = note.pinned ? "Dejar de fijar" : "Fijar"
+  // A note shared with this account is only removed from its notes.
+  const deleteLabel = note.isOwner ? "Eliminar" : "Quitar de mis notas"
   const PinActionIcon = note.pinned ? PinOffIcon : PinIcon
 
   return (
@@ -443,19 +448,17 @@ function NotePickerRow({
           >
             <PinActionIcon />
           </Button>
-          {note.isOwner && (
-            <Button
-              aria-label="Eliminar nota"
-              className="hover:text-destructive"
-              disabled={Boolean(note.deleteDisabledReason)}
-              onClick={onRequestDelete}
-              title={note.deleteDisabledReason}
-              size="icon-xs"
-              variant="ghost"
-            >
-              <Trash2Icon />
-            </Button>
-          )}
+          <Button
+            aria-label={deleteLabel}
+            className="hover:text-destructive"
+            disabled={Boolean(note.deleteDisabledReason)}
+            onClick={onRequestDelete}
+            title={note.deleteDisabledReason ?? deleteLabel}
+            size="icon-xs"
+            variant="ghost"
+          >
+            <Trash2Icon />
+          </Button>
           <DropdownMenu onOpenChange={setIsMenuOpen} open={isMenuOpen}>
             <DropdownMenuTrigger
               render={
@@ -475,19 +478,15 @@ function NotePickerRow({
               <DropdownMenuItem onClick={onTogglePin}>
                 <PinActionIcon /> {pinLabel}
               </DropdownMenuItem>
-              {note.isOwner && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    disabled={Boolean(note.deleteDisabledReason)}
-                    onClick={onRequestDelete}
-                    title={note.deleteDisabledReason}
-                    variant="destructive"
-                  >
-                    <Trash2Icon /> Eliminar
-                  </DropdownMenuItem>
-                </>
-              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={Boolean(note.deleteDisabledReason)}
+                onClick={onRequestDelete}
+                title={note.deleteDisabledReason}
+                variant="destructive"
+              >
+                <Trash2Icon /> {deleteLabel}
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -499,19 +498,15 @@ function NotePickerRow({
         <ContextMenuItem onClick={onTogglePin}>
           <PinActionIcon /> {pinLabel}
         </ContextMenuItem>
-        {note.isOwner && (
-          <>
-            <ContextMenuSeparator />
-            <ContextMenuItem
-              disabled={Boolean(note.deleteDisabledReason)}
-              onClick={onRequestDelete}
-              title={note.deleteDisabledReason}
-              variant="destructive"
-            >
-              <Trash2Icon /> Eliminar
-            </ContextMenuItem>
-          </>
-        )}
+        <ContextMenuSeparator />
+        <ContextMenuItem
+          disabled={Boolean(note.deleteDisabledReason)}
+          onClick={onRequestDelete}
+          title={note.deleteDisabledReason}
+          variant="destructive"
+        >
+          <Trash2Icon /> {deleteLabel}
+        </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
   )

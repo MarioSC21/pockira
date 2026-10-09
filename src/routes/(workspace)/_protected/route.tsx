@@ -5,6 +5,7 @@ import {
   sessionQueryOptions,
   useSession,
 } from "@/modules/authentication"
+import { NoteInvitationsMenu } from "@/modules/notes"
 import { ProtectedLayout } from "@/modules/workspace"
 
 export const Route = createFileRoute("/(workspace)/_protected")({
@@ -30,5 +31,11 @@ function ProtectedRoute() {
     return <Navigate replace to="/login" />
   }
 
-  return <ProtectedLayout footer={<AccountMenu />} />
+  return (
+    <ProtectedLayout
+      footer={<AccountMenu />}
+      // Guests have no account to be invited to.
+      notifications={session?.user ? <NoteInvitationsMenu /> : null}
+    />
+  )
 }

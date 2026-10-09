@@ -53,6 +53,9 @@ export function fromStoredNote(note: StoredNote): WorkspaceNote {
 
   return {
     ...note,
+    // Notes kept on the device are always the person's own; copies stored
+    // before these flags existed lack them.
+    canEdit: true,
     createdAt,
     isOwner: true,
     updatedAt: parseDate(note.updatedAt, createdAt),

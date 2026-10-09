@@ -22,6 +22,7 @@ export function useCreateNote() {
       // The row comes back without the computed flags list_notes adds.
       queryClient.setQueryData<Note>(noteKeys.detail(created.id), {
         ...created,
+        can_edit: true,
         is_owner: true,
         is_shared: false,
       })
@@ -60,13 +61,33 @@ export function useDeleteNote() {
   })
 }
 
-export function useClaimNoteInvitations() {
+/** Removes a note shared with the signed-in person from their notes only. */
+export function useLeaveNote() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: note.claimInvitations,
-    onSuccess: async (claimed) => {
-      if (claimed > 0) {
+    mutationFn: (id: string) => note.leave(id),
+    onSuccess: async (_result, id) => {
+      queryClient.removeQueries({ queryKey: noteKeys.detail(id) })
+      await queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
+      await queryClient.invalidateQueries({ queryKey: noteKeys.reminders() })
+    },
+  })
+}
+
+export function useRespondNoteInvitation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ accessId, accept }: { accessId: string; accept: boolean }) =>
+      note.respondInvitation(accessId, accept),
+    // Settled, not success: an invitation that is gone must leave the list too.
+    onSettled: async (_result, _error, { accept }) => {
+      await queryClient.invalidateQueries({
+        queryKey: noteKeys.invitations(),
+      })
+
+      if (accept) {
         await queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
       }
     },

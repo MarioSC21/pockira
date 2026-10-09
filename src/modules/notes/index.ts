@@ -1,3 +1,4 @@
+export { NoteInvitationsMenu } from "./components/note-invitations-menu"
 export { NotesScreen } from "./screens/notes-screen"
 export type { NotesSource } from "./screens/notes-screen"
 export { note } from "./service/api"
@@ -9,18 +10,21 @@ export type {
 export { noteKeys } from "./service/keys"
 export {
   useCreateNote,
-  useClaimNoteInvitations,
   useCreateReminder,
   useDeleteNote,
+  useLeaveNote,
+  useRespondNoteInvitation,
   useShareNote,
   useUpdateNote,
 } from "./service/mutations"
 export {
   noteCollaboratorsQueryOptions,
   noteDetailQueryOptions,
+  noteInvitationsQueryOptions,
   notesListQueryOptions,
   useNote,
   useNoteCollaborators,
+  useNoteInvitations,
   useNotesList,
 } from "./service/queries"
 export type {
@@ -28,6 +32,7 @@ export type {
   NoteAccess,
   NoteAccessRole,
   NoteAccessStatus,
+  NoteInvitation,
   NoteScope,
   Reminder,
   ReminderRepeatInterval,

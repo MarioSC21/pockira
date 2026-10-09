@@ -1,5 +1,6 @@
 import {
   BellIcon,
+  LockIcon,
   MoreHorizontalIcon,
   PanelLeftIcon,
   Share2Icon,
@@ -36,6 +37,9 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
+import { cn } from "@/shared/lib/utils"
+
+const READ_ONLY_HINT = "Solo puedes ver esta nota"
 
 const SAVE_STATUS_LABEL: Record<NotesSaveStatus, string> = {
   error: "Error al guardar",
@@ -115,7 +119,7 @@ export function NoteEditorPanel({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {saveStatus && <SaveStatusLabel status={saveStatus} />}
-            {note && (canCollaborate || note.isOwner) && (
+            {note && (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={<Button size="icon" variant="ghost" />}
@@ -150,16 +154,15 @@ export function NoteEditorPanel({
                       <BellIcon /> Recordatorio
                     </DropdownMenuItem>
                   )}
-                  {note.isOwner && (
-                    <DropdownMenuItem
-                      disabled={Boolean(note.deleteDisabledReason)}
-                      onClick={() => setIsDeleteOpen(true)}
-                      title={note.deleteDisabledReason}
-                      variant="destructive"
-                    >
-                      <Trash2Icon /> Eliminar nota
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem
+                    disabled={Boolean(note.deleteDisabledReason)}
+                    onClick={() => setIsDeleteOpen(true)}
+                    title={note.deleteDisabledReason}
+                    variant="destructive"
+                  >
+                    <Trash2Icon />{" "}
+                    {note.isOwner ? "Eliminar nota" : "Quitar de mis notas"}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -182,6 +185,7 @@ export function NoteEditorPanel({
       )}
       {note && (
         <DeleteNoteDialog
+          isOwner={note.isOwner}
           onConfirm={() => onDeleteNote(note.id)}
           onOpenChange={setIsDeleteOpen}
           open={isDeleteOpen}
@@ -215,16 +219,25 @@ function NoteTitleField({
   return (
     <div className="min-w-0">
       <input
-        className="w-full bg-transparent text-xl font-semibold outline-none"
+        className="w-full bg-transparent text-xl font-semibold outline-none read-only:cursor-not-allowed"
         onChange={(event) =>
           onUpdateNote(note.id, { title: event.target.value })
         }
         placeholder="Título"
+        readOnly={!note.canEdit}
+        title={note.canEdit ? undefined : READ_ONLY_HINT}
         value={note.title}
       />
-      {tags.length > 0 && (
-        <p className="text-muted-foreground truncate text-xs">
+      {(tags.length > 0 || !note.canEdit) && (
+        <p className="text-muted-foreground flex items-center gap-1.5 truncate text-xs">
           {tags.map((tag) => tag.label).join(" · ")}
+          {!note.canEdit && (
+            <span className="inline-flex items-center gap-1">
+              {tags.length > 0 && "·"}
+              <LockIcon aria-hidden="true" className="size-3" />
+              Solo lectura
+            </span>
+          )}
         </p>
       )}
     </div>
@@ -264,6 +277,8 @@ function NoteEditorBody({
     <ScrollArea className="min-h-0 flex-1 px-6 pb-6">
       <Plate
         editor={editor}
+        // A note shared as "Puede ver" can be read and selected, not edited.
+        readOnly={!note.canEdit}
         // onValueChange, not onChange: onChange also fires when only the
         // selection moves, so a click would mark the note as edited.
         onValueChange={({ value }: { value: Value }) => {
@@ -272,22 +287,33 @@ function NoteEditorBody({
       >
         {/* overflow-y-visible: Plate's container variant ships overflow-y-auto,
             which would scroll natively and leave the ScrollArea inert. */}
-        <EditorContainer className="min-h-full overflow-y-visible">
+        <EditorContainer
+          className={cn(
+            "min-h-full overflow-y-visible",
+            !note.canEdit && "cursor-not-allowed"
+          )}
+          title={note.canEdit ? undefined : READ_ONLY_HINT}
+        >
           <Editor
-            className="min-h-full text-sm leading-relaxed"
+            className={cn(
+              "min-h-full text-sm leading-relaxed",
+              !note.canEdit && "cursor-not-allowed"
+            )}
             onMouseDown={(event) => {
               // The editable fills the panel, so clicking the blank space below
               // the last block hits the editable root itself. Browsers disagree
               // on what that does — some place the caret at the end, others
               // extend the current selection — so place it explicitly.
-              if (event.target !== event.currentTarget) {
+              if (!note.canEdit || event.target !== event.currentTarget) {
                 return
               }
               event.preventDefault()
               editor.tf.focus()
               editor.tf.select(editor.api.end([]), { edge: "end" })
             }}
-            placeholder="Escribe algo, o '/' para comandos..."
+            placeholder={
+              note.canEdit ? "Escribe algo, o '/' para comandos..." : undefined
+            }
             variant="none"
           />
         </EditorContainer>

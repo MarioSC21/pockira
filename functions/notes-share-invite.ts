@@ -104,11 +104,14 @@ async function loadPendingNoteAccess(
 async function sendInviteEmail(noteAccess: NoteAccess, inviterName: string) {
   const noteTitle = noteAccess.notes?.title ?? "una nota"
   const roleLabel = noteAccess.role === "editor" ? "editar" : "ver"
-  const link = APP_URL ? `${APP_URL}/notes/${noteAccess.note_id}` : null
+  // The share waits for an answer: it is accepted from the bell
+  // (Notificaciones) in the app, not by opening the note.
+  const link = APP_URL ? `${APP_URL}/notes` : null
 
   const html = `
     <p>${inviterName} te invitó a ${roleLabel} la nota "<strong>${noteTitle}</strong>" en Pockira.</p>
-    ${link ? `<p><a href="${link}">Abrir nota</a></p>` : "<p>Iniciá sesión en Pockira para verla.</p>"}
+    <p>Para aceptarla, inicia sesión con este correo y abre <strong>Notificaciones</strong> (el ícono de la campana).</p>
+    ${link ? `<p><a href="${link}">Abrir Pockira</a></p>` : ""}
   `
 
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {

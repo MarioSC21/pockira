@@ -161,6 +161,9 @@ export function NotesListPanel({
       </div>
       {noteIdToDelete && (
         <DeleteNoteDialog
+          isOwner={
+            notes.find((item) => item.id === noteIdToDelete)?.isOwner ?? true
+          }
           onConfirm={() => onDeleteNote(noteIdToDelete)}
           onOpenChange={(isDialogOpen) => {
             if (!isDialogOpen) {
@@ -217,20 +220,18 @@ function NoteListCard({
       </button>
       {/* h-5 matches the title's line-height so the icons center on it. */}
       <div className="absolute top-3 right-3 flex h-5 items-center gap-2">
-        {note.isOwner ? (
-          <button
-            aria-label="Eliminar nota"
-            className="text-muted-foreground/50 hover:text-destructive rounded-sm disabled:pointer-events-none disabled:opacity-40"
-            disabled={Boolean(note.deleteDisabledReason)}
-            onClick={onRequestDelete}
-            title={note.deleteDisabledReason}
-            type="button"
-          >
-            {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's
+        <button
+          aria-label={note.isOwner ? "Eliminar nota" : "Quitar de mis notas"}
+          className="text-muted-foreground/50 hover:text-destructive rounded-sm disabled:pointer-events-none disabled:opacity-40"
+          disabled={Boolean(note.deleteDisabledReason)}
+          onClick={onRequestDelete}
+          title={note.deleteDisabledReason}
+          type="button"
+        >
+          {/* size-3: the trash glyph is wider and bottom-heavy, so at the pin's
               14px it reads as bigger and lower than it. */}
-            <Trash2Icon className="size-3" />
-          </button>
-        ) : null}
+          <Trash2Icon className="size-3" />
+        </button>
         <button
           aria-label={note.pinned ? "Dejar de fijar nota" : "Fijar nota"}
           aria-pressed={note.pinned}
