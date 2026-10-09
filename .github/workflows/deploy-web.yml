@@ -1,0 +1,60 @@
+# Builds the web app and publishes it to Cloudflare Pages
+# (project "pockira-app", https://pockira-app.pages.dev) on every push to main.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   VITE_INSFORGE_URL, VITE_INSFORGE_ANON_KEY — baked into the frontend build.
+#   CLOUDFLARE_API_TOKEN — token with the "Cloudflare Pages: Edit" permission.
+#   CLOUDFLARE_ACCOUNT_ID — the Cloudflare account that owns the project.
+name: Deploy web app
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "docs/**"
+      - "website/**"
+      - "migrations/**"
+      - "src-tauri/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build and deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm run build
+        env:
+          VITE_INSFORGE_URL: ${{ secrets.VITE_INSFORGE_URL }}
+          VITE_INSFORGE_ANON_KEY: ${{ secrets.VITE_INSFORGE_ANON_KEY }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name pockira-app --branch main

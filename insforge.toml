@@ -1,6 +1,7 @@
 [auth]
 allowed_redirect_urls = [
   "http://localhost:1420/notes",
+  "https://pockira-app.pages.dev/notes",
   "pockira://auth-callback",
   "http://localhost:17345/auth-callback",
   "http://localhost:17346/auth-callback",
