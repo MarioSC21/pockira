@@ -20,7 +20,11 @@ import type { PlateEditor, PlateElementProps } from "platejs/react"
 import { PlateElement } from "platejs/react"
 import * as React from "react"
 
-import { insertBlock } from "@/shared/components/custom-components/editor/transforms"
+import { useStatuses } from "@/shared/components/custom-components/editor/status-store"
+import {
+  insertBlock,
+  insertStatus,
+} from "@/shared/components/custom-components/editor/transforms"
 
 import {
   InlineCombobox,
@@ -31,6 +35,7 @@ import {
   InlineComboboxInput,
   InlineComboboxItem,
 } from "./inline-combobox"
+import { StatusPill } from "./status-node"
 
 interface Group {
   group: string
@@ -139,6 +144,7 @@ export function SlashInputElement(
   props: PlateElementProps<TComboboxInputElement>
 ) {
   const { editor, element } = props
+  const statuses = useStatuses()
 
   return (
     <PlateElement {...props} as="span">
@@ -167,6 +173,25 @@ export function SlashInputElement(
               ))}
             </InlineComboboxGroup>
           ))}
+
+          {statuses.length > 0 && (
+            <InlineComboboxGroup>
+              <InlineComboboxGroupLabel>Estados</InlineComboboxGroupLabel>
+
+              {statuses.map((status) => (
+                <InlineComboboxItem
+                  group="Estados"
+                  key={status.name}
+                  keywords={["estado", "status", "etiqueta"]}
+                  label={status.name}
+                  onClick={() => insertStatus(editor, status)}
+                  value={`status:${status.name}`}
+                >
+                  <StatusPill status={status} />
+                </InlineComboboxItem>
+              ))}
+            </InlineComboboxGroup>
+          )}
         </InlineComboboxContent>
       </InlineCombobox>
 

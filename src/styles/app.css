@@ -289,10 +289,12 @@
   --sidebar-ring: oklch(0.7 0.15 var(--hue));
 }
 
-/* Translucent window (desktop app, see shared/lib/window-translucency.ts):
-   the theme color is painted once behind everything at --window-opacity, so
-   the desktop shows through, and the surfaces on top become tints of it, as
-   in the gradient themes. Menus, popovers and dialogs stay solid. */
+/* Glass window (desktop app, see shared/lib/window-translucency.ts): the
+   system blurs what is behind the window and the theme color is painted once
+   over it as a tint at --window-opacity, with a faint sheen, so the desktop
+   shows through frosted. The surfaces on top become light tints of the theme,
+   as in the gradient themes, edged by a hairline that catches the light.
+   Menus, popovers and dialogs stay solid. */
 :root[data-translucent],
 :root[data-translucent] body {
   background: transparent;
@@ -303,15 +305,34 @@
   inset: 0;
   z-index: -1;
   background-color: var(--boot-background);
-  background-image: var(--app-backdrop, none);
+  background-image: var(
+    --app-backdrop,
+    linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--foreground) 9%, transparent),
+      transparent 45%,
+      color-mix(in oklab, var(--foreground) 4%, transparent)
+    )
+  );
   opacity: var(--window-opacity, 1);
   content: "";
   pointer-events: none;
 }
 
+:root[data-translucent] body::after {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 14%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
 :root[data-translucent]:not([data-theme="twilight"], [data-theme="midnight"]) {
-  --background: color-mix(in oklab, var(--boot-background) 30%, transparent);
+  --background: color-mix(in oklab, var(--boot-background) 18%, transparent);
   --sidebar: color-mix(in oklab, var(--foreground) 5%, transparent);
+  --border: color-mix(in oklab, var(--foreground) 12%, transparent);
 }
 
 /* The viewport minus the desktop title bar: what full-height screens fill. */

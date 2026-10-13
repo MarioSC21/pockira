@@ -46,6 +46,7 @@ import {
   useUpdateNote,
 } from "@/modules/notes/service/mutations"
 import {
+  loadStoredOpenTabs,
   readOpenTabs,
   writeOpenTabs,
 } from "@/modules/notes/service/open-tabs-store"
@@ -347,6 +348,29 @@ export function useAccountNotesWorkspace(
     let isActive = true
 
     const restore = async () => {
+      // The device store holds the tabs as they were when the app closed; the
+      // webview's copy read above can be older. Whatever was opened while
+      // this was loading stays open. Nothing is written until this ends, so
+      // the webview's copy is still the one the tabs started from.
+      const initialTabs = readOpenTabs(accountId)
+      const storedTabs = await loadStoredOpenTabs(accountId)
+
+      if (isActive && storedTabs) {
+        setOpenNoteIds((prev) => [
+          ...storedTabs.openNoteIds,
+          ...prev.filter(
+            (id) =>
+              !initialTabs.openNoteIds.includes(id) &&
+              !storedTabs.openNoteIds.includes(id)
+          ),
+        ])
+        setSelectedNoteId((prev) =>
+          prev && prev !== initialTabs.selectedNoteId
+            ? prev
+            : storedTabs.selectedNoteId
+        )
+      }
+
       try {
         const stored = await loadOfflineAccountNotes(accountId)
         const seen = queryClient

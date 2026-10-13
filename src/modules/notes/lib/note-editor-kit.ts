@@ -8,6 +8,7 @@ import { FontKit } from "@/shared/components/custom-components/editor/plugins/fo
 import { LinkKit } from "@/shared/components/custom-components/editor/plugins/link-kit"
 import { ListKit } from "@/shared/components/custom-components/editor/plugins/list-kit"
 import { SlashKit } from "@/shared/components/custom-components/editor/plugins/slash-kit"
+import { StatusKit } from "@/shared/components/custom-components/editor/plugins/status-kit"
 import { TableKit } from "@/shared/components/custom-components/editor/plugins/table-kit"
 import { ToggleKit } from "@/shared/components/custom-components/editor/plugins/toggle-kit"
 
@@ -18,6 +19,7 @@ export const noteEditorKit = [
   ...ListKit,
   ...ToggleKit,
   ...LinkKit,
+  ...StatusKit,
   ...TableKit,
   ...SlashKit,
   ...BlockPlaceholderKit,

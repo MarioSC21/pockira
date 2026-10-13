@@ -7,6 +7,9 @@ import { KEYS, PathApi } from "platejs"
 import type { Path, TElement } from "platejs"
 import type { PlateEditor } from "platejs/react"
 
+import { STATUS_KEY } from "@/shared/components/custom-components/editor/plugins/status-kit"
+import type { NoteStatus } from "@/shared/components/custom-components/editor/status-store"
+
 const insertList = (editor: PlateEditor, type: string) => {
   editor.tf.insertNodes(
     editor.api.create.block({
@@ -28,6 +31,40 @@ const insertToggle = (editor: PlateEditor) => {
   if (typeof id === "string") {
     editor.getApi(TogglePlugin).toggle.toggleIds([id], true)
   }
+}
+
+/** Puts the status tag at the caret, which stays right after it. */
+export const insertStatus = (editor: PlateEditor, status: NoteStatus) => {
+  editor.tf.insertNodes(
+    {
+      children: [{ text: "" }],
+      color: status.color,
+      name: status.name,
+      type: STATUS_KEY,
+    },
+    { select: true }
+  )
+
+  // The selection lands inside the tag, where nothing can be typed; put it
+  // in the text right after.
+  const tag = editor.api.above({ match: { type: STATUS_KEY } })
+  const after = tag && editor.api.after(tag[1])
+
+  if (!after) {
+    return
+  }
+
+  editor.tf.select(after)
+
+  // Leaving the slash menu refocuses the editor once the pick ends, which
+  // puts the caret back before the tag; select again after that.
+  const afterRef = editor.api.pointRef(after)
+  setTimeout(() => {
+    const point = afterRef.unref()
+    if (point) {
+      editor.tf.select(point)
+    }
+  }, 0)
 }
 
 const createBlockquote = (editor: PlateEditor) => ({

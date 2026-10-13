@@ -18,7 +18,8 @@ let sessionRestore: Promise<boolean> | null = null
     refreshes it, and a request sent before that goes out with the project
     key alone instead of as the signed-in person. Backend calls await this
     first. A run that found no user is not kept, so a later call (back
-    online, or after signing in) tries again. */
+    online, or after signing in) tries again. Resolves to whether the request
+    that follows goes out as the signed-in person. */
 export async function whenSessionRestored() {
   sessionRestore ??= (async () => {
     try {
@@ -29,7 +30,11 @@ export async function whenSessionRestored() {
     }
   })()
 
-  if (!(await sessionRestore)) {
+  const isSignedIn = await sessionRestore
+
+  if (!isSignedIn) {
     sessionRestore = null
   }
+
+  return isSignedIn
 }

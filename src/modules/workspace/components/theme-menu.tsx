@@ -50,7 +50,7 @@ function ThemeSwatch({ colors }: { colors: readonly [string, string] }) {
 
 const OPACITY_STEP = 5
 
-/** Desktop only: how much of the desktop shows through the window. */
+/** Desktop only: frosted-glass window that lets the desktop show through. */
 function WindowTranslucencyControls() {
   const [translucency, setTranslucency] = useState<WindowTranslucency>(
     readWindowTranslucency
@@ -65,34 +65,36 @@ function WindowTranslucencyControls() {
   return (
     <DropdownMenuGroup>
       <DropdownMenuSeparator />
-      <DropdownMenuLabel>Transparencia</DropdownMenuLabel>
-      <label className="flex items-center gap-3 px-2 py-1.5 text-sm">
-        <span className="sr-only">Opacidad de la ventana</span>
-        <input
-          className="accent-primary min-w-0 flex-1"
-          max={MAX_WINDOW_OPACITY}
-          min={MIN_WINDOW_OPACITY}
-          onChange={(event) =>
-            handleChange({ opacity: Number(event.target.value) })
-          }
-          // The menu reads the arrow keys to move between its items.
-          onKeyDown={(event) => event.stopPropagation()}
-          step={OPACITY_STEP}
-          type="range"
-          value={translucency.opacity}
-        />
-        <span className="text-muted-foreground w-9 text-right text-xs tabular-nums">
-          {translucency.opacity}%
-        </span>
-      </label>
+      <DropdownMenuLabel>Ventana</DropdownMenuLabel>
       <DropdownMenuCheckboxItem
-        checked={translucency.blur}
+        checked={translucency.enabled}
         closeOnClick={false}
-        disabled={translucency.opacity === MAX_WINDOW_OPACITY}
-        onCheckedChange={(blur) => handleChange({ blur })}
+        onCheckedChange={(enabled) => handleChange({ enabled })}
       >
-        Desenfocar el fondo
+        Efecto cristal
       </DropdownMenuCheckboxItem>
+      {translucency.enabled && (
+        <label className="flex items-center gap-3 px-2 py-1.5 text-sm">
+          <span className="text-muted-foreground text-xs">Tinte</span>
+          <input
+            aria-label="Tinte del cristal"
+            className="accent-primary min-w-0 flex-1"
+            max={MAX_WINDOW_OPACITY}
+            min={MIN_WINDOW_OPACITY}
+            onChange={(event) =>
+              handleChange({ opacity: Number(event.target.value) })
+            }
+            // The menu reads the arrow keys to move between its items.
+            onKeyDown={(event) => event.stopPropagation()}
+            step={OPACITY_STEP}
+            type="range"
+            value={translucency.opacity}
+          />
+          <span className="text-muted-foreground w-9 text-right text-xs tabular-nums">
+            {translucency.opacity}%
+          </span>
+        </label>
+      )}
     </DropdownMenuGroup>
   )
 }

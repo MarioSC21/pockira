@@ -3,24 +3,25 @@ import { Effect, getCurrentWindow } from "@tauri-apps/api/window"
 import { isDesktopApp } from "@/shared/lib/platform"
 
 /**
- * See-through window on the desktop builds: the window itself is created
- * transparent (tauri.conf.json) and the app paints its background at the
- * chosen opacity (`[data-translucent]` in styles/app.css), optionally with
- * the system blur behind it. The web and mobile have nothing behind the page
- * to show.
+ * Glass window on the desktop builds: the window itself is created
+ * transparent (tauri.conf.json), the system blurs what is behind it and the
+ * app paints its theme color over that as a tint (`[data-translucent]` in
+ * styles/app.css). The tint never goes away, so the desktop shows through
+ * frosted instead of plainly visible. The web and mobile have nothing behind
+ * the page to show.
  */
 export interface WindowTranslucency {
-  /** Percentage of the background that stays; 100 is a solid window. */
+  enabled: boolean
+  /** Percentage of the theme color kept over the blurred desktop. */
   opacity: number
-  /** Blurs what is behind the window (Windows). */
-  blur: boolean
 }
 
-export const MIN_WINDOW_OPACITY = 30
-export const MAX_WINDOW_OPACITY = 100
+export const MIN_WINDOW_OPACITY = 45
+export const MAX_WINDOW_OPACITY = 90
+const DEFAULT_WINDOW_OPACITY = 70
 
+const ENABLED_KEY = "pockira:window-glass"
 const OPACITY_KEY = "pockira:window-opacity"
-const BLUR_KEY = "pockira:window-blur"
 const PERCENT = 100
 
 // macOS only makes a window transparent through its private API, which the
@@ -40,18 +41,18 @@ export function readWindowTranslucency(): WindowTranslucency {
     const opacity = Number(localStorage.getItem(OPACITY_KEY))
 
     return {
-      blur: localStorage.getItem(BLUR_KEY) === "true",
+      enabled: localStorage.getItem(ENABLED_KEY) === "true",
       opacity:
         Number.isFinite(opacity) && opacity > 0
           ? clampOpacity(opacity)
-          : MAX_WINDOW_OPACITY,
+          : DEFAULT_WINDOW_OPACITY,
     }
   } catch {
-    return { blur: false, opacity: MAX_WINDOW_OPACITY }
+    return { enabled: false, opacity: DEFAULT_WINDOW_OPACITY }
   }
 }
 
-// The effect is only sent when it changes; dragging the opacity slider would
+// The effect is only sent when it changes; dragging the slider would
 // otherwise call the window on every step.
 let appliedBlur = false
 
@@ -69,29 +70,28 @@ async function applyBlur(enabled: boolean) {
       ? appWindow.setEffects({ effects: [Effect.Acrylic] })
       : appWindow.clearEffects())
   } catch {
-    // Without the effect (Linux) the opacity still applies.
+    // Without the effect (Linux) the tint still applies.
   }
 }
 
-function applyWindowTranslucency({ blur, opacity }: WindowTranslucency) {
+function applyWindowTranslucency({ enabled, opacity }: WindowTranslucency) {
   if (!isWindowTranslucencyAvailable()) {
     return
   }
 
   const root = document.documentElement
-  const isTranslucent = opacity < MAX_WINDOW_OPACITY
 
-  root.toggleAttribute("data-translucent", isTranslucent)
+  root.toggleAttribute("data-translucent", enabled)
   root.style.setProperty("--window-opacity", String(opacity / PERCENT))
-  void applyBlur(isTranslucent && blur)
+  void applyBlur(enabled)
 }
 
 export function setWindowTranslucency(translucency: WindowTranslucency) {
   const next = { ...translucency, opacity: clampOpacity(translucency.opacity) }
 
   try {
+    localStorage.setItem(ENABLED_KEY, String(next.enabled))
     localStorage.setItem(OPACITY_KEY, String(next.opacity))
-    localStorage.setItem(BLUR_KEY, String(next.blur))
   } catch {
     // It still applies; it just will not survive a restart.
   }
@@ -99,7 +99,7 @@ export function setWindowTranslucency(translucency: WindowTranslucency) {
   applyWindowTranslucency(next)
 }
 
-/** Applies the stored translucency before the first render. */
+/** Applies the stored setting before the first render. */
 export function initWindowTranslucency() {
   applyWindowTranslucency(readWindowTranslucency())
 }

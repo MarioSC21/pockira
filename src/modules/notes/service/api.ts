@@ -81,7 +81,7 @@ export const note = {
 
   /** Read through get_note so it carries the same flags as the list. */
   async get(id: string): Promise<Note> {
-    await whenSessionRestored()
+    const isSignedIn = await whenSessionRestored()
 
     const { data, error } = await insforge.database.rpc("get_note", {
       p_note_id: id,
@@ -91,9 +91,21 @@ export const note = {
       throw new Error(error.message)
     }
 
-    const [found] = (data ?? []) as Note[]
+    // Only an answer with no row says the note is gone.
+    if (!Array.isArray(data)) {
+      throw new TypeError("Respuesta inesperada al leer la nota")
+    }
+
+    const [found] = data as Note[]
 
     if (!found) {
+      // A request sent before the session came back (the token refresh
+      // failed on startup) reads as nobody and finds nothing; that says
+      // nothing about the note, and closing its tab would lose it.
+      if (!isSignedIn) {
+        throw new Error("No se pudo restaurar la sesión")
+      }
+
       throw new NoteNotFoundError()
     }
 
