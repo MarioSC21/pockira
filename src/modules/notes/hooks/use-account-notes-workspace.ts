@@ -33,6 +33,7 @@ import type {
   NoteDraft,
   OfflineAccountNotes,
 } from "@/modules/notes/service/account-notes-store"
+import { NoteNotFoundError } from "@/modules/notes/service/api"
 import type {
   ListNotesParams,
   ListNotesResult,
@@ -426,8 +427,12 @@ export function useAccountNotesWorkspace(
 
   // A remembered tab whose note was deleted or unshared elsewhere cannot be
   // fetched any more; it is hidden and forgotten instead of lingering empty.
+  // Only when the backend answers that the note is gone: a request that fails
+  // because the connection dropped must not close the tabs.
   const missingIds = new Set(
-    fetchedIds.filter((_, index) => openQueries[index]?.isError)
+    fetchedIds.filter(
+      (_, index) => openQueries[index]?.error instanceof NoteNotFoundError
+    )
   )
   // A new note is remembered once something is written in it, and only where
   // the device copy keeps it.

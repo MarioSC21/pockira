@@ -31,6 +31,15 @@ export interface ListNotesResult {
   nextCursor: NoteCursor | null
 }
 
+/** The note was deleted, or is no longer shared with this account. A failed
+    request (no connection, backend down) is any other error. */
+export class NoteNotFoundError extends Error {
+  constructor() {
+    super("Nota no encontrada")
+    this.name = "NoteNotFoundError"
+  }
+}
+
 export const note = {
   async list({
     scope,
@@ -85,7 +94,7 @@ export const note = {
     const [found] = (data ?? []) as Note[]
 
     if (!found) {
-      throw new Error("Nota no encontrada")
+      throw new NoteNotFoundError()
     }
 
     return found

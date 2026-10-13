@@ -1,5 +1,5 @@
 import { XIcon } from "lucide-react"
-import type { ReactNode } from "react"
+import type { MouseEvent, ReactNode } from "react"
 
 import type { WorkspaceNote } from "@/modules/notes/lib/workspace-note"
 import { ScrollArea } from "@/shared/components/ui/scroll-area"
@@ -14,6 +14,17 @@ interface NoteTabsBarProps {
   leading?: ReactNode
   /** Right after the last tab (e.g. the new-note button). */
   trailing?: ReactNode
+  /** Pinned to the right end (the open note's save status and menu). */
+  actions?: ReactNode
+}
+
+const MIDDLE_BUTTON = 1
+
+/** The browser starts its autoscroll on a middle press; a tab closes instead. */
+function preventMiddleButtonScroll(event: MouseEvent) {
+  if (event.button === MIDDLE_BUTTON) {
+    event.preventDefault()
+  }
 }
 
 export function NoteTabsBar({
@@ -23,9 +34,18 @@ export function NoteTabsBar({
   onCloseTab,
   leading,
   trailing,
+  actions,
 }: NoteTabsBarProps) {
-  if (notes.length === 0 && !leading) {
+  if (notes.length === 0 && !leading && !actions) {
     return null
+  }
+
+  // Middle click closes a tab, as in a browser.
+  const closeOnMiddleClick = (id: string) => (event: MouseEvent) => {
+    if (event.button === MIDDLE_BUTTON) {
+      event.preventDefault()
+      onCloseTab(id)
+    }
   }
 
   return (
@@ -59,7 +79,9 @@ export function NoteTabsBar({
               >
                 <button
                   className="min-w-0 flex-1 truncate py-2 text-left text-sm"
+                  onAuxClick={closeOnMiddleClick(note.id)}
                   onClick={() => onSelectTab(note.id)}
+                  onMouseDown={preventMiddleButtonScroll}
                   type="button"
                 >
                   {note.title || "Nueva nota"}
@@ -70,10 +92,12 @@ export function NoteTabsBar({
                     "hover:bg-accent hover:text-foreground mr-2 shrink-0 rounded-sm p-0.5 opacity-0 group-hover:opacity-100",
                     isActive && "opacity-100"
                   )}
+                  onAuxClick={closeOnMiddleClick(note.id)}
                   onClick={(event) => {
                     event.stopPropagation()
                     onCloseTab(note.id)
                   }}
+                  onMouseDown={preventMiddleButtonScroll}
                   type="button"
                 >
                   <XIcon className="size-3.5" />
@@ -86,6 +110,11 @@ export function NoteTabsBar({
           ) : null}
         </div>
       </ScrollArea>
+      {actions ? (
+        <div className="flex h-10 shrink-0 items-center gap-1 pr-2 pl-1">
+          {actions}
+        </div>
+      ) : null}
     </div>
   )
 }

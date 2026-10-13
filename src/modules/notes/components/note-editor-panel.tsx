@@ -95,80 +95,80 @@ export function NoteEditorPanel({
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
       <NoteTabsBar
+        actions={
+          (saveStatus || note) && (
+            <>
+              {saveStatus && <SaveStatusLabel status={saveStatus} />}
+              {note && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button size="icon-sm" variant="ghost" />}
+                  >
+                    <MoreHorizontalIcon />
+                  </DropdownMenuTrigger>
+                  {/* w-auto: the base class sizes the menu to w-(--anchor-width),
+                  which here is a 32px icon button, so it fell back to min-w-32
+                  and wrapped every label onto two lines. */}
+                  <DropdownMenuContent className="w-auto">
+                    {/* The title shows when the note was created; the last
+                    edit is tucked away here. */}
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel>
+                        Modificada el {formatNoteDateTime(note.updatedAt)}
+                      </DropdownMenuLabel>
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    {canCollaborate && note.isOwner && (
+                      <DropdownMenuItem
+                        disabled={isOffline}
+                        onClick={() => setIsShareOpen(true)}
+                      >
+                        <Share2Icon /> Compartir nota
+                      </DropdownMenuItem>
+                    )}
+                    {canCollaborate && (
+                      <DropdownMenuItem
+                        disabled={isOffline}
+                        onClick={() => setIsReminderOpen(true)}
+                      >
+                        <BellIcon /> Recordatorio
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      disabled={Boolean(note.deleteDisabledReason)}
+                      onClick={() => setIsDeleteOpen(true)}
+                      title={note.deleteDisabledReason}
+                      variant="destructive"
+                    >
+                      <Trash2Icon />{" "}
+                      {note.isOwner ? "Eliminar nota" : "Quitar de mis notas"}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
+            </>
+          )
+        }
         activeNoteId={note?.id}
+        // Mobile has no picker in the strip; its list button goes there.
+        leading={
+          tabsLeading ??
+          (onToggleList && (
+            <Button
+              aria-label="Ver lista de notas"
+              onClick={onToggleList}
+              size="icon-sm"
+              variant="ghost"
+            >
+              <PanelLeftIcon />
+            </Button>
+          ))
+        }
         notes={openNotes}
         onCloseTab={onCloseTab}
-        leading={tabsLeading}
         onSelectTab={onSelectTab}
         trailing={tabsTrailing}
       />
-      {(note || onToggleList) && (
-        <header className="flex items-center justify-between gap-4 p-4">
-          <div className="flex min-w-0 items-center gap-3">
-            {onToggleList && (
-              <Button
-                aria-label="Ver lista de notas"
-                onClick={onToggleList}
-                size="icon-sm"
-                variant="ghost"
-              >
-                <PanelLeftIcon />
-              </Button>
-            )}
-            {note && <NoteTitleField note={note} onUpdateNote={onUpdateNote} />}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {saveStatus && <SaveStatusLabel status={saveStatus} />}
-            {note && (
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={<Button size="icon" variant="ghost" />}
-                >
-                  <MoreHorizontalIcon />
-                </DropdownMenuTrigger>
-                {/* w-auto: the base class sizes the menu to w-(--anchor-width),
-                  which here is a 32px icon button, so it fell back to min-w-32
-                  and wrapped every label onto two lines. */}
-                <DropdownMenuContent className="w-auto">
-                  {/* The header shows when the note was created; the last
-                    edit is tucked away here. */}
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>
-                      Modificada el {formatNoteDateTime(note.updatedAt)}
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  {canCollaborate && note.isOwner && (
-                    <DropdownMenuItem
-                      disabled={isOffline}
-                      onClick={() => setIsShareOpen(true)}
-                    >
-                      <Share2Icon /> Compartir nota
-                    </DropdownMenuItem>
-                  )}
-                  {canCollaborate && (
-                    <DropdownMenuItem
-                      disabled={isOffline}
-                      onClick={() => setIsReminderOpen(true)}
-                    >
-                      <BellIcon /> Recordatorio
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem
-                    disabled={Boolean(note.deleteDisabledReason)}
-                    onClick={() => setIsDeleteOpen(true)}
-                    title={note.deleteDisabledReason}
-                    variant="destructive"
-                  >
-                    <Trash2Icon />{" "}
-                    {note.isOwner ? "Eliminar nota" : "Quitar de mis notas"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </header>
-      )}
       {note && canCollaborate && (
         <>
           <ShareNoteDialog
@@ -217,9 +217,9 @@ function NoteTitleField({
   const tags = noteTags(note)
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 pt-6 pb-3">
       <input
-        className="w-full bg-transparent text-xl font-semibold outline-none read-only:cursor-not-allowed"
+        className="w-full bg-transparent text-2xl font-semibold outline-none read-only:cursor-not-allowed"
         onChange={(event) =>
           onUpdateNote(note.id, { title: event.target.value })
         }
@@ -275,49 +275,56 @@ function NoteEditorBody({
 
   return (
     <ScrollArea className="min-h-0 flex-1 px-6 pb-6">
-      <Plate
-        editor={editor}
-        // A note shared as "Puede ver" can be read and selected, not edited.
-        readOnly={!note.canEdit}
-        // onValueChange, not onChange: onChange also fires when only the
-        // selection moves, so a click would mark the note as edited.
-        onValueChange={({ value }: { value: Value }) => {
-          onUpdateNote(note.id, { body: value })
-        }}
-      >
-        {/* overflow-y-visible: Plate's container variant ships overflow-y-auto,
-            which would scroll natively and leave the ScrollArea inert. */}
-        <EditorContainer
-          className={cn(
-            "min-h-full overflow-y-visible",
-            !note.canEdit && "cursor-not-allowed"
-          )}
-          title={note.canEdit ? undefined : READ_ONLY_HINT}
+      {/* The title is part of the page: it scrolls away with the text instead
+          of holding a fixed strip above it. */}
+      <div className="flex min-h-full flex-col">
+        <NoteTitleField note={note} onUpdateNote={onUpdateNote} />
+        <Plate
+          editor={editor}
+          // A note shared as "Puede ver" can be read and selected, not edited.
+          readOnly={!note.canEdit}
+          // onValueChange, not onChange: onChange also fires when only the
+          // selection moves, so a click would mark the note as edited.
+          onValueChange={({ value }: { value: Value }) => {
+            onUpdateNote(note.id, { body: value })
+          }}
         >
-          <Editor
+          {/* overflow-y-visible: Plate's container variant ships overflow-y-auto,
+              which would scroll natively and leave the ScrollArea inert. */}
+          <EditorContainer
             className={cn(
-              "min-h-full text-sm leading-relaxed",
+              "flex flex-1 flex-col overflow-y-visible",
               !note.canEdit && "cursor-not-allowed"
             )}
-            onMouseDown={(event) => {
-              // The editable fills the panel, so clicking the blank space below
-              // the last block hits the editable root itself. Browsers disagree
-              // on what that does — some place the caret at the end, others
-              // extend the current selection — so place it explicitly.
-              if (!note.canEdit || event.target !== event.currentTarget) {
-                return
+            title={note.canEdit ? undefined : READ_ONLY_HINT}
+          >
+            <Editor
+              className={cn(
+                "flex-1 text-sm leading-relaxed",
+                !note.canEdit && "cursor-not-allowed"
+              )}
+              onMouseDown={(event) => {
+                // The editable fills the panel, so clicking the blank space below
+                // the last block hits the editable root itself. Browsers disagree
+                // on what that does — some place the caret at the end, others
+                // extend the current selection — so place it explicitly.
+                if (!note.canEdit || event.target !== event.currentTarget) {
+                  return
+                }
+                event.preventDefault()
+                editor.tf.focus()
+                editor.tf.select(editor.api.end([]), { edge: "end" })
+              }}
+              placeholder={
+                note.canEdit
+                  ? "Escribe algo, o '/' para comandos..."
+                  : undefined
               }
-              event.preventDefault()
-              editor.tf.focus()
-              editor.tf.select(editor.api.end([]), { edge: "end" })
-            }}
-            placeholder={
-              note.canEdit ? "Escribe algo, o '/' para comandos..." : undefined
-            }
-            variant="none"
-          />
-        </EditorContainer>
-      </Plate>
+              variant="none"
+            />
+          </EditorContainer>
+        </Plate>
+      </div>
     </ScrollArea>
   )
 }

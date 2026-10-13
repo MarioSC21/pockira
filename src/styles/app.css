@@ -289,6 +289,31 @@
   --sidebar-ring: oklch(0.7 0.15 var(--hue));
 }
 
+/* Translucent window (desktop app, see shared/lib/window-translucency.ts):
+   the theme color is painted once behind everything at --window-opacity, so
+   the desktop shows through, and the surfaces on top become tints of it, as
+   in the gradient themes. Menus, popovers and dialogs stay solid. */
+:root[data-translucent],
+:root[data-translucent] body {
+  background: transparent;
+}
+
+:root[data-translucent] body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--boot-background);
+  background-image: var(--app-backdrop, none);
+  opacity: var(--window-opacity, 1);
+  content: "";
+  pointer-events: none;
+}
+
+:root[data-translucent]:not([data-theme="twilight"], [data-theme="midnight"]) {
+  --background: color-mix(in oklab, var(--boot-background) 30%, transparent);
+  --sidebar: color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
 /* The viewport minus the desktop title bar: what full-height screens fill. */
 @utility h-app {
   height: calc(100svh - var(--titlebar-height));

@@ -9,12 +9,14 @@ import { LinkKit } from "@/shared/components/custom-components/editor/plugins/li
 import { ListKit } from "@/shared/components/custom-components/editor/plugins/list-kit"
 import { SlashKit } from "@/shared/components/custom-components/editor/plugins/slash-kit"
 import { TableKit } from "@/shared/components/custom-components/editor/plugins/table-kit"
+import { ToggleKit } from "@/shared/components/custom-components/editor/plugins/toggle-kit"
 
 export const noteEditorKit = [
   ...BasicNodesKit,
   ...CodeBlockKit,
   ...FontKit,
   ...ListKit,
+  ...ToggleKit,
   ...LinkKit,
   ...TableKit,
   ...SlashKit,

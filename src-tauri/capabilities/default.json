@@ -18,6 +18,7 @@
     "core:window:allow-close",
     "core:window:allow-start-dragging",
     "core:window:allow-set-fullscreen",
+    "core:window:allow-set-effects",
     "core:webview:allow-set-webview-zoom",
     "notification:default",
     "store:default",

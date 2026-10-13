@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  ChevronRightIcon,
   Code2,
   Heading1Icon,
   Heading2Icon,
@@ -87,6 +88,19 @@ const groups: Group[] = [
         keywords: ["ordered", "ol", "numerada", "1"],
         label: "Lista numerada",
         value: KEYS.ol,
+      },
+      {
+        icon: <ChevronRightIcon />,
+        keywords: [
+          "toggle",
+          "acordeon",
+          "seccion",
+          "colapsar",
+          "plegable",
+          "collapsible",
+        ],
+        label: "Sección desplegable",
+        value: KEYS.toggle,
       },
       {
         icon: <Quote />,

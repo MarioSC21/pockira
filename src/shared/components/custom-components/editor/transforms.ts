@@ -2,6 +2,7 @@
 
 import { insertCodeBlock } from "@platejs/code-block"
 import { insertTable } from "@platejs/table"
+import { TogglePlugin } from "@platejs/toggle/react"
 import { KEYS, PathApi } from "platejs"
 import type { Path, TElement } from "platejs"
 import type { PlateEditor } from "platejs/react"
@@ -14,6 +15,19 @@ const insertList = (editor: PlateEditor, type: string) => {
     }),
     { select: true }
   )
+}
+
+// Inserted open, so what is written next lands inside it instead of hidden.
+const insertToggle = (editor: PlateEditor) => {
+  editor.tf.insertNodes(editor.api.create.block({ type: KEYS.toggle }), {
+    select: true,
+  })
+
+  const id = editor.api.block()?.[0].id
+
+  if (typeof id === "string") {
+    editor.getApi(TogglePlugin).toggle.toggleIds([id], true)
+  }
 }
 
 const createBlockquote = (editor: PlateEditor) => ({
@@ -38,6 +52,7 @@ const insertBlockMap: Record<
   [KEYS.ul]: insertList,
   [KEYS.codeBlock]: (editor) => insertCodeBlock(editor, { select: true }),
   [KEYS.table]: (editor) => insertTable(editor, {}, { select: true }),
+  [KEYS.toggle]: insertToggle,
 }
 
 interface InsertBlockOptions {

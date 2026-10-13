@@ -5,7 +5,7 @@ import {
   useQuery,
 } from "@tanstack/react-query"
 
-import { note } from "./api"
+import { note, NoteNotFoundError } from "./api"
 import type { ListNotesParams, ListNotesResult, NoteCursor } from "./api"
 import { noteKeys } from "./keys"
 import { loadDeviceNotesWorkspace } from "./notes-workspace-store"
@@ -28,6 +28,9 @@ export const noteDetailQueryOptions = (id: string) =>
   queryOptions({
     queryFn: () => note.get(id),
     queryKey: noteKeys.detail(id),
+    // Asking again does not bring back a note that is gone.
+    retry: (failureCount, error) =>
+      !(error instanceof NoteNotFoundError) && failureCount < 3,
   })
 
 export const useNote = (id: string) => useQuery(noteDetailQueryOptions(id))
