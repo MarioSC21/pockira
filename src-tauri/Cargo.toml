@@ -32,3 +32,10 @@ tauri-plugin-process = "2"
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"
 
+# Idle time and uptime for the break reminder (see `activity_info`).
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.60", features = [
+  "Win32_System_SystemInformation",
+  "Win32_UI_Input_KeyboardAndMouse",
+] }
+

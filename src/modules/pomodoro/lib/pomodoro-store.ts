@@ -1,7 +1,12 @@
+import { invoke } from "@tauri-apps/api/core"
 import { Schedule } from "@tauri-apps/plugin-notification"
 import { format } from "date-fns"
 
-import { isMobileApp } from "@/shared/lib/platform"
+import {
+  playPomodoroChime,
+  unlockPomodoroSound,
+} from "@/modules/pomodoro/lib/pomodoro-sound"
+import { isDesktopApp, isMobileApp } from "@/shared/lib/platform"
 import {
   cancelScheduledNotifications,
   ensureNotificationPermission,
@@ -18,6 +23,12 @@ export interface PomodoroSettings {
   longBreakMinutes: number
   /** Focus sessions before a long break. */
   longBreakEvery: number
+  /** Start the break on its own when a focus session ends. */
+  autoStartBreaks: boolean
+  /** Start the next focus session on its own when a break ends. */
+  autoStartFocus: boolean
+  /** Play a chime when a phase ends. */
+  sound: boolean
 }
 
 export interface PomodoroState {
@@ -32,13 +43,18 @@ export interface PomodoroState {
   /** Focus sessions finished today, for the counter. */
   today: { date: string; count: number }
   settings: PomodoroSettings
+  /** The phase that just ended, until the alert is dismissed. */
+  alert: PomodoroMode | null
 }
 
 export const DEFAULT_SETTINGS: PomodoroSettings = {
+  autoStartBreaks: true,
+  autoStartFocus: false,
   focusMinutes: 25,
   longBreakEvery: 4,
   longBreakMinutes: 15,
   shortBreakMinutes: 5,
+  sound: true,
 }
 
 const STORAGE_KEY = "pockira:pomodoro"
@@ -67,6 +83,7 @@ export function phaseDurationMs(
 
 function initialState(): PomodoroState {
   return {
+    alert: null,
     cycleCount: 0,
     endsAt: null,
     mode: "focus",
@@ -91,6 +108,8 @@ function load(): PomodoroState {
     return {
       ...initialState(),
       ...stored,
+      // The alert belongs to the moment the phase ended, not to a restart.
+      alert: null,
       settings,
       today:
         stored.today?.date === todayKey()
@@ -185,7 +204,29 @@ function nextMode(): { mode: PomodoroMode; cycleCount: number } {
     : { cycleCount, mode: "shortBreak" }
 }
 
-/** Ends the current phase and readies the next one (not started). */
+function shouldAutoStart(mode: PomodoroMode) {
+  return mode === "focus"
+    ? state.settings.autoStartFocus
+    : state.settings.autoStartBreaks
+}
+
+/** Brings the desktop window in front of everything and flashes it in the
+    taskbar, since a toast alone is easy to miss. */
+export async function grabWindowAttention() {
+  if (!isDesktopApp()) {
+    return
+  }
+
+  try {
+    await invoke("alert_main_window")
+  } catch {
+    // The toast still went out; raising the window is a bonus.
+  }
+}
+
+/** Ends the current phase and readies the next one, starting it right away
+    when the settings say so. `notify` is false for a phase that ended while
+    the app was closed: that one neither alerts nor auto-starts. */
 function complete(notify: boolean) {
   clearTimeout(phaseTimer)
 
@@ -194,6 +235,7 @@ function complete(notify: boolean) {
       NOTIFICATION_TITLE,
       completionMessage(state.mode, state.settings)
     )
+    void grabWindowAttention()
   }
 
   const finishedFocus = state.mode === "focus"
@@ -202,16 +244,35 @@ function complete(notify: boolean) {
       ? state.today
       : { count: 0, date: todayKey() }
   const { mode, cycleCount } = nextMode()
+  const remainingMs = phaseDurationMs(mode, state.settings)
+  const autoStart = notify && shouldAutoStart(mode)
+
+  if (notify && state.settings.sound) {
+    void playPomodoroChime(mode)
+  }
+  const endsAt = autoStart ? Date.now() + remainingMs : null
 
   setState({
     ...state,
+    alert: notify ? state.mode : null,
     cycleCount,
-    endsAt: null,
+    endsAt,
     mode,
-    remainingMs: phaseDurationMs(mode, state.settings),
-    status: "idle",
+    remainingMs,
+    status: autoStart ? "running" : "idle",
     today: finishedFocus ? { ...today, count: today.count + 1 } : today,
   })
+
+  if (endsAt) {
+    armTimer()
+    scheduleMobileNotification(endsAt)
+  }
+}
+
+export function dismissPomodoroAlert() {
+  if (state.alert) {
+    setState({ ...state, alert: null })
+  }
 }
 
 /** Asks for permission (on the click, so the system prompt has a clear
@@ -229,6 +290,9 @@ export function startPomodoro() {
   if (state.status === "running") {
     return
   }
+
+  // While there is a click to count as interaction, so the chime can play.
+  void unlockPomodoroSound()
 
   // The timer starts at once; it never waits for the permission prompt.
   const endsAt = Date.now() + state.remainingMs

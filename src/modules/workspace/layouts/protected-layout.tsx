@@ -2,6 +2,7 @@ import { Link, Outlet } from "@tanstack/react-router"
 import { FileText, TimerIcon } from "lucide-react"
 import type { ReactNode } from "react"
 
+import { BreakReminderAlert, PomodoroAlert } from "@/modules/pomodoro"
 import { ThemeMenu } from "@/modules/workspace/components/theme-menu"
 import {
   Sidebar,
@@ -95,6 +96,8 @@ export function ProtectedLayout({
         <main className="min-h-0 min-w-0 flex-1">
           <Outlet />
         </main>
+        <PomodoroAlert />
+        <BreakReminderAlert />
       </SidebarInset>
     </SidebarProvider>
   )

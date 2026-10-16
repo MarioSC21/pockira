@@ -23,6 +23,73 @@ fn show_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// Pomodoro phase ended: pulls the window in front of every other app and
+/// flashes it in the taskbar, since the Windows toast alone is easy to miss.
+/// Toggling always-on-top raises it even when Windows refuses to hand focus
+/// to a background app.
+#[tauri::command]
+fn alert_main_window(app: tauri::AppHandle) {
+    #[cfg(desktop)]
+    {
+        use tauri::{Manager, UserAttentionType};
+
+        show_main_window(&app);
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.set_always_on_top(true);
+            let _ = window.set_always_on_top(false);
+            let _ = window.request_user_attention(Some(UserAttentionType::Critical));
+        }
+    }
+    #[cfg(mobile)]
+    let _ = app;
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ActivityInfo {
+    /// Time since the last keyboard or mouse input anywhere in the system.
+    idle_ms: u64,
+    /// Time since Windows booted (or woke from Fast Startup's hibernation).
+    uptime_ms: u64,
+}
+
+/// Feeds the break reminder: how long the user has been away from the PC and
+/// how long it has been on. Only Windows reports it; elsewhere it is `None`
+/// and the reminder stays off.
+#[tauri::command]
+fn activity_info() -> Option<ActivityInfo> {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::SystemInformation::{GetTickCount, GetTickCount64};
+        use windows_sys::Win32::UI::Input::KeyboardAndMouse::{GetLastInputInfo, LASTINPUTINFO};
+
+        let mut last_input = LASTINPUTINFO {
+            cbSize: std::mem::size_of::<LASTINPUTINFO>() as u32,
+            dwTime: 0,
+        };
+        // SAFETY: plain Win32 calls with a correctly sized struct.
+        let (ok, now, uptime) = unsafe {
+            (
+                GetLastInputInfo(&mut last_input),
+                GetTickCount(),
+                GetTickCount64(),
+            )
+        };
+        if ok == 0 {
+            return None;
+        }
+
+        // Both tick counts are u32 that wrap every ~49 days; wrapping_sub
+        // keeps the difference right across the wrap.
+        Some(ActivityInfo {
+            idle_ms: u64::from(now.wrapping_sub(last_input.dwTime)),
+            uptime_ms: uptime,
+        })
+    }
+    #[cfg(not(windows))]
+    None
+}
+
 /// Tray icon: left click opens the window, right click shows the menu.
 #[cfg(desktop)]
 fn build_tray(app: &tauri::App) -> tauri::Result<()> {
@@ -114,7 +181,12 @@ pub fn run() {
                 }
             }
         })
-        .invoke_handler(tauri::generate_handler![greet, quit_app])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            quit_app,
+            alert_main_window,
+            activity_info
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
